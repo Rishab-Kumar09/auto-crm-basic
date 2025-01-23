@@ -110,7 +110,7 @@ const Sidebar = () => {
   return (
     <div className="h-screen w-64 bg-white border-r border-zendesk-border flex flex-col">
       <div className="p-4 border-b border-zendesk-border">
-        <h1 className="text-xl font-bold text-zendesk-secondary">Help Desk</h1>
+        <h1 className="text-xl font-bold text-zendesk-secondary">Auto CRM</h1>
         <p className="text-sm text-zendesk-muted mt-1 capitalize">{userRole} Portal</p>
       </div>
       <nav className="flex-1 p-4">
