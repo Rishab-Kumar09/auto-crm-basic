@@ -154,17 +154,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
       if (ticketError) throw ticketError;
 
-      // Create the assignment record
-      const { error: assignmentError } = await supabase
-        .from('ticket_assignments')
-        .insert({
-          ticket_id: ticket.id,
-          agent_id: agentId,
-          assigned_by: user.id
-        });
-
-      if (assignmentError) throw assignmentError;
-
       toast({
         title: "Success",
         description: "Agent assigned successfully.",
