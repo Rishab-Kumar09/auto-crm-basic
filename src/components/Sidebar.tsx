@@ -1,4 +1,4 @@
-import { Home, Inbox, Users, Settings, HelpCircle, UserCog, LogOut } from "lucide-react";
+import { Home, Inbox, Users, Settings, HelpCircle, UserCog, LogOut, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { UserRole } from "@/types/ticket";
@@ -16,7 +16,7 @@ const getMenuItems = (role: UserRole) => {
   if (role === "customer") {
     return [
       ...baseItems,
-      { icon: HelpCircle, label: "Help Center", href: "/help" },
+      { icon: Building, label: "Companies", href: "/companies" },
       { icon: Settings, label: "Settings", href: "/settings" },
     ];
   }
@@ -104,7 +104,7 @@ const Sidebar = () => {
   };
 
   const handleNavigation = (item: { label: string; href: string }) => {
-    if (["/dashboard", "/tickets", "/customers", "/agents", "/settings"].includes(item.href)) {
+    if (["/dashboard", "/tickets", "/customers", "/agents", "/settings", "/companies"].includes(item.href)) {
       navigate(item.href);
     } else {
       toast({

@@ -10,6 +10,7 @@ import Tickets from "./pages/Tickets";
 import Customers from "./pages/Customers";
 import Agents from "./pages/Agents";
 import Settings from "./pages/Settings";
+import Companies from "./pages/Companies";
 import React, { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 
@@ -123,6 +124,16 @@ const App = () => {
                 element={
                   session ? (
                     <Settings />
+                  ) : (
+                    <Navigate to="/auth" replace />
+                  )
+                }
+              />
+              <Route
+                path="/companies"
+                element={
+                  session ? (
+                    <Companies />
                   ) : (
                     <Navigate to="/auth" replace />
                   )
