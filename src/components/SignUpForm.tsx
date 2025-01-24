@@ -31,27 +31,8 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
     setIsLoading(true);
 
     try {
-      // First, if admin, create the company
-      let companyId: string | undefined;
-
-      if (role === 'admin') {
-        const { data: company, error: companyError } = await supabase
-          .from('companies')
-          .insert([{ name: companyName }])
-          .select()
-          .single();
-
-        if (companyError) {
-          throw new Error('Failed to create company: ' + companyError.message);
-        }
-
-        companyId = company.id;
-      } else if (role === 'agent' && !selectedCompanyId) {
-        throw new Error('Please select a company');
-      }
-
-      // Then create the user
-      const { error: signUpError } = await supabase.auth.signUp({
+      // First create the user
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -68,19 +49,57 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
         throw signUpError;
       }
 
-      // Create profile with selected role and company if admin or agent
+      if (!authData.user) {
+        throw new Error('Failed to create user');
+      }
+
+      // Create profile with selected role
       const { error: profileError } = await supabase.from('profiles').insert([
         {
-          id: (await supabase.auth.getUser()).data.user?.id,
+          id: authData.user.id,
           email,
           full_name: fullName,
           role,
-          company_id: role === 'admin' ? companyId : selectedCompanyId,
         },
       ]);
 
       if (profileError) {
         throw new Error('Failed to create user profile');
+      }
+
+      // If admin, create the company and update profile
+      if (role === 'admin') {
+        const { data: company, error: companyError } = await supabase
+          .from('companies')
+          .insert([{ name: companyName }])
+          .select()
+          .single();
+
+        if (companyError) {
+          throw new Error('Failed to create company: ' + companyError.message);
+        }
+
+        // Update profile with company_id
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ company_id: company.id })
+          .eq('id', authData.user.id);
+
+        if (updateError) {
+          throw new Error('Failed to update profile with company');
+        }
+      } else if (role === 'agent' && !selectedCompanyId) {
+        throw new Error('Please select a company');
+      } else if (role === 'agent') {
+        // Update profile with selected company for agent
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ company_id: selectedCompanyId })
+          .eq('id', authData.user.id);
+
+        if (updateError) {
+          throw new Error('Failed to update profile with company');
+        }
       }
 
       onSuccess();
