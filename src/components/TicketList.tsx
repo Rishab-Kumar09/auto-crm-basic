@@ -229,7 +229,15 @@ const TicketList = () => {
   }
 
   if (selectedTicket) {
-    return <TicketDetails ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />;
+    return (
+      <TicketDetails
+        ticket={selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        onUpdate={() => {
+          fetchTickets(); // Refresh the ticket list only
+        }}
+      />
+    );
   }
 
   return (

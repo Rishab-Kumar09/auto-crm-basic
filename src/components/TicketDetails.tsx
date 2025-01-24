@@ -22,6 +22,7 @@ import AttachmentList from './AttachmentList';
 interface TicketDetailsProps {
   ticket: Ticket;
   onClose: () => void;
+  onUpdate?: () => void;
 }
 
 interface Attachment {
@@ -35,7 +36,7 @@ interface Attachment {
   comment_id?: string;
 }
 
-const TicketDetails = ({ ticket: initialTicket, onClose }: TicketDetailsProps) => {
+const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetailsProps) => {
   const { toast } = useToast();
   const [ticket, setTicket] = useState<Ticket>(initialTicket);
   const [comments, setComments] = useState<TicketComment[]>([]);
@@ -100,10 +101,26 @@ const TicketDetails = ({ ticket: initialTicket, onClose }: TicketDetailsProps) =
   };
 
   const fetchAvailableAgents = async () => {
+    // First get the admin's company_id
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: adminProfile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!adminProfile?.company_id) return;
+
+    // Then fetch only agents from the same company
     const { data: agents } = await supabase
       .from('profiles')
       .select('id, full_name')
-      .eq('role', 'agent');
+      .eq('role', 'agent')
+      .eq('company_id', adminProfile.company_id);
 
     if (agents) {
       setAvailableAgents(
@@ -388,6 +405,9 @@ const TicketDetails = ({ ticket: initialTicket, onClose }: TicketDetailsProps) =
         description: 'Ticket status updated successfully.',
       });
 
+      // Notify parent component about the update
+      onUpdate?.();
+
       // Auto refresh page when ticket is closed
       if (newStatus === 'closed') {
         toast({
@@ -431,6 +451,9 @@ const TicketDetails = ({ ticket: initialTicket, onClose }: TicketDetailsProps) =
         title: 'Success',
         description: 'Ticket priority updated successfully.',
       });
+
+      // Notify parent component about the update
+      onUpdate?.();
     } catch (error) {
       console.error('Error updating ticket priority:', error);
       toast({
@@ -479,6 +502,9 @@ const TicketDetails = ({ ticket: initialTicket, onClose }: TicketDetailsProps) =
         title: 'Success',
         description: 'Agent assigned successfully.',
       });
+
+      // Notify parent component about the update
+      onUpdate?.();
     } catch (error) {
       console.error('Error assigning agent:', error);
       toast({
