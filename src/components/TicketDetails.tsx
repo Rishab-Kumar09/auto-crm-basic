@@ -429,34 +429,47 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleDeleteAttachment = async (attachmentId: string) => {
     try {
-      const { data: attachment } = await supabase
+      // First get the attachment details
+      const { data: attachment, error: fetchError } = await supabase
         .from('attachments')
-        .select('file_path')
+        .select('file_path, uploaded_by')
         .eq('id', attachmentId)
         .single();
 
-      if (attachment) {
-        // Delete from storage
-        const { error: storageError } = await supabase.storage
-          .from('attachments')
-          .remove([attachment.file_path]);
+      if (fetchError) throw fetchError;
 
-        if (storageError) throw storageError;
-
-        // Delete from database
-        const { error: dbError } = await supabase
-          .from('attachments')
-          .delete()
-          .eq('id', attachmentId);
-
-        if (dbError) throw dbError;
-
-        fetchAttachments();
-        toast({
-          title: "Success",
-          description: "Attachment deleted successfully.",
-        });
+      if (!attachment) {
+        throw new Error('Attachment not found');
       }
+
+      // Delete from storage first
+      const { error: storageError } = await supabase.storage
+        .from('attachments')
+        .remove([attachment.file_path]);
+
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+        throw storageError;
+      }
+
+      // Then delete from database
+      const { error: dbError } = await supabase
+        .from('attachments')
+        .delete()
+        .eq('id', attachmentId);
+
+      if (dbError) {
+        console.error('Database deletion error:', dbError);
+        throw dbError;
+      }
+
+      // Refresh attachments list
+      await fetchAttachments();
+      
+      toast({
+        title: "Success",
+        description: "Attachment deleted successfully.",
+      });
     } catch (error) {
       console.error('Error deleting attachment:', error);
       toast({

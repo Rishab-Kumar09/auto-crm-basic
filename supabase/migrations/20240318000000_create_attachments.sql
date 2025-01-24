@@ -27,7 +27,11 @@ ON storage.objects FOR SELECT TO authenticated USING (
 CREATE POLICY "Allow users to delete their own files"
 ON storage.objects FOR DELETE TO authenticated USING (
   bucket_id = 'attachments' AND
-  (storage.foldername(name))[1] = auth.uid()::text
+  (
+    (storage.foldername(name))[1] = auth.uid()::text
+    OR
+    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
+  )
 );
 
 -- Create attachments table
@@ -93,10 +97,13 @@ CREATE POLICY "Users can upload attachments" ON public.attachments
     uploaded_by = auth.uid()
   );
 
--- Policy to allow users to delete their own attachments
-CREATE POLICY "Users can delete their own attachments" ON public.attachments
+-- Policy to allow users to delete attachments (updated to include admin)
+DROP POLICY IF EXISTS "Users can delete their own attachments" ON public.attachments;
+CREATE POLICY "Users can delete attachments" ON public.attachments
   FOR DELETE TO authenticated USING (
     uploaded_by = auth.uid()
+    OR
+    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
   );
 
 -- Create trigger to update updated_at
