@@ -40,7 +40,7 @@ const Customers = () => {
           throw new Error('No company associated with user');
         }
 
-        const { data: ticketCustomers, error: ticketError } = await supabase
+        let query = supabase
           .from('profiles')
           .select(`
             *,
@@ -68,6 +68,13 @@ const Customers = () => {
           `)
           .eq('role', 'customer')
           .eq('tickets.company_id', userProfile.company_id);
+
+        // If user is an agent, only show tickets assigned to them
+        if (userProfile.role === 'agent') {
+          query = query.eq('tickets.assignee_id', user.id);
+        }
+
+        const { data: ticketCustomers, error: ticketError } = await query;
 
         if (ticketError) throw ticketError;
 

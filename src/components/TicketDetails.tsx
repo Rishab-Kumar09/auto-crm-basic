@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, MessageSquare, User, Building } from "lucide-react";
+import { Clock, MessageSquare, User, Building, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Ticket, TicketComment, UserRole, TicketStatus } from "@/types/ticket";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,10 +14,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import RichTextEditor from "@/components/RichTextEditor";
+import { Textarea } from "@/components/ui/textarea";
+import FileUpload from "./FileUpload";
+import AttachmentList from "./AttachmentList";
 
 interface TicketDetailsProps {
   ticket: Ticket;
   onClose: () => void;
+}
+
+interface Attachment {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  file_path: string;
+  uploaded_by: string;
+  ticket_id?: string;
+  comment_id?: string;
 }
 
 const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
@@ -27,14 +42,31 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>("customer");
   const [availableAgents, setAvailableAgents] = useState<{ id: string; name: string }[]>([]);
+  const [rating, setRating] = useState<number | null>(null);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [existingFeedback, setExistingFeedback] = useState<{ rating: number; comment: string | null } | null>(null);
+  const [ticketAttachments, setTicketAttachments] = useState<Attachment[]>([]);
+  const [commentAttachments, setCommentAttachments] = useState<{ [key: string]: Attachment[] }>({});
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchUserRole();
-    fetchComments();
+    const initializeData = async () => {
+      await fetchUserRole();
+      await fetchCurrentUser();
+      const commentsData = await fetchComments();
+      if (commentsData) {
+        setComments(commentsData);
+        await fetchAttachments(commentsData);
+      }
+    };
+    
+    initializeData();
+    fetchFeedback();
     if (userRole === 'admin') {
       fetchAvailableAgents();
     }
-  }, [ticket.id, userRole]);
+  }, [ticket.id]);
 
   const fetchUserRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -48,6 +80,13 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       if (profile) {
         setUserRole(profile.role as UserRole);
       }
+    }
+  };
+
+  const fetchCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setCurrentUserId(user.id);
     }
   };
 
@@ -98,7 +137,8 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           created_at: new Date(comment.created_at).toLocaleString(),
         }));
 
-      setComments(formattedComments);
+      setLoading(false);
+      return formattedComments;
     } catch (error) {
       console.error("Error fetching comments:", error);
       toast({
@@ -106,8 +146,192 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         description: "Failed to load comments. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
+      return null;
+    }
+  };
+
+  const fetchFeedback = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: feedback } = await supabase
+      .from('feedback')
+      .select('rating, comment')
+      .eq('ticket_id', ticket.id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (feedback) {
+      setExistingFeedback(feedback);
+      setRating(feedback.rating);
+      setFeedbackComment(feedback.comment || '');
+    }
+  };
+
+  const fetchAttachments = async (currentComments: TicketComment[] = comments) => {
+    try {
+      console.log('Starting fetchAttachments...');
+      console.log('Current user role:', userRole);
+      console.log('Current ticket:', ticket);
+      console.log('Current comments:', currentComments);
+
+      // Fetch ticket attachments
+      const { data: ticketFiles, error: ticketError } = await supabase
+        .from('attachments')
+        .select('*')
+        .eq('ticket_id', ticket.id)
+        .is('comment_id', null);
+
+      if (ticketError) {
+        console.error('Error fetching ticket attachments:', ticketError);
+        throw ticketError;
+      }
+      console.log('Fetched ticket attachments:', ticketFiles);
+      setTicketAttachments(ticketFiles || []);
+
+      if (currentComments.length === 0) {
+        console.log('No comments to fetch attachments for');
+        setCommentAttachments({});
+        return;
+      }
+
+      // Log comment IDs being queried
+      console.log('Comment IDs being queried:', currentComments.map(comment => comment.id));
+
+      // Fetch comment attachments with debug info
+      const { data: commentFiles, error: commentError } = await supabase
+        .from('attachments')
+        .select('*')
+        .in('comment_id', currentComments.map(comment => comment.id));
+
+      if (commentError) {
+        console.error('Error fetching comment attachments:', commentError);
+        throw commentError;
+      }
+
+      console.log('Raw comment attachments response:', commentFiles);
+
+      // Group attachments by comment ID
+      const groupedAttachments = (commentFiles || []).reduce((acc, attachment) => {
+        if (attachment.comment_id) {
+          acc[attachment.comment_id] = [...(acc[attachment.comment_id] || []), attachment];
+        }
+        return acc;
+      }, {} as { [key: string]: Attachment[] });
+
+      console.log('Grouped attachments by comment:', groupedAttachments);
+      setCommentAttachments(groupedAttachments);
+    } catch (error) {
+      console.error('Error in fetchAttachments:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load attachments. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFileSelect = (files: File[]) => {
+    setPendingFiles(prev => [...prev, ...files]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() && pendingFiles.length === 0) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      // Add comment
+      const { data: comment, error: commentError } = await supabase
+        .from("comments")
+        .insert({
+          ticket_id: ticket.id,
+          user_id: user.id,
+          content: newComment,
+        })
+        .select()
+        .single();
+
+      if (commentError) throw commentError;
+
+      console.log('Created comment:', comment);
+
+      // Upload and attach files if any
+      if (pendingFiles.length > 0) {
+        console.log('Uploading files:', pendingFiles.map(f => f.name));
+        const uploadedFiles = [];
+
+        for (const file of pendingFiles) {
+          const fileExt = file.name.split('.').pop();
+          const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+          console.log('Uploading file to path:', filePath);
+
+          const { error: uploadError } = await supabase.storage
+            .from('attachments')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('Error uploading file:', uploadError);
+            throw uploadError;
+          }
+
+          uploadedFiles.push({
+            file_name: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            file_path: filePath,
+          });
+        }
+
+        console.log('Files uploaded successfully:', uploadedFiles);
+
+        // Add attachments to database
+        const { data: attachments, error: attachmentError } = await supabase
+          .from('attachments')
+          .insert(
+            uploadedFiles.map(file => ({
+              ...file,
+              comment_id: comment.id,
+              uploaded_by: user.id,
+            }))
+          )
+          .select();
+
+        if (attachmentError) {
+          console.error('Error saving attachments:', attachmentError);
+          throw attachmentError;
+        }
+
+        console.log('Attachments saved to database:', attachments);
+      }
+
+      // Fetch updated comments and attachments
+      const newComments = await fetchComments();
+      if (newComments) {
+        setComments(newComments);
+        await fetchAttachments(newComments);
+      }
+      
+      setNewComment("");
+      setPendingFiles([]);
+      toast({
+        title: "Success",
+        description: "Comment added successfully.",
+      });
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -169,34 +393,75 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     }
   };
 
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
+  const handleSubmitFeedback = async () => {
+    if (rating === null) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
       const { error } = await supabase
-        .from("comments")
-        .insert({
+        .from("feedback")
+        .upsert({
           ticket_id: ticket.id,
           user_id: user.id,
-          content: newComment,
+          rating,
+          comment: feedbackComment || null,
         });
 
       if (error) throw error;
 
-      fetchComments();
-      setNewComment("");
       toast({
         title: "Success",
-        description: "Comment added successfully.",
+        description: "Thank you for your feedback!",
       });
+      
+      setExistingFeedback({ rating, comment: feedbackComment });
     } catch (error) {
-      console.error("Error adding comment:", error);
+      console.error("Error submitting feedback:", error);
       toast({
         title: "Error",
-        description: "Failed to add comment. Please try again.",
+        description: "Failed to submit feedback. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    try {
+      const { data: attachment } = await supabase
+        .from('attachments')
+        .select('file_path')
+        .eq('id', attachmentId)
+        .single();
+
+      if (attachment) {
+        // Delete from storage
+        const { error: storageError } = await supabase.storage
+          .from('attachments')
+          .remove([attachment.file_path]);
+
+        if (storageError) throw storageError;
+
+        // Delete from database
+        const { error: dbError } = await supabase
+          .from('attachments')
+          .delete()
+          .eq('id', attachmentId);
+
+        if (dbError) throw dbError;
+
+        fetchAttachments();
+        toast({
+          title: "Success",
+          description: "Attachment deleted successfully.",
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting attachment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete attachment. Please try again.",
         variant: "destructive",
       });
     }
@@ -231,6 +496,65 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
             Close
           </Button>
         </div>
+
+        <div>
+          <h3 className="font-medium text-zendesk-secondary mb-2">Description</h3>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div 
+              className="prose max-w-none"
+              dangerouslySetInnerHTML={{ __html: ticket.description }}
+            />
+          </div>
+          <div className="mt-4">
+            <AttachmentList
+              attachments={ticketAttachments}
+              onDelete={handleDeleteAttachment}
+              showDelete={userRole === 'admin'}
+            />
+          </div>
+        </div>
+
+        {userRole === 'customer' && ticket.status === 'closed' && (
+          <div>
+            <h3 className="font-medium text-zendesk-secondary mb-2">Rate this ticket</h3>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    onClick={() => !existingFeedback && setRating(value)}
+                    className={`p-1 rounded-full hover:bg-gray-100 ${
+                      value <= (rating || 0) ? 'text-yellow-400' : 'text-gray-300'
+                    } ${existingFeedback ? 'cursor-default' : 'cursor-pointer'}`}
+                    disabled={!!existingFeedback}
+                  >
+                    <Star className="w-8 h-8" fill={value <= (rating || 0) ? 'currentColor' : 'none'} />
+                  </button>
+                ))}
+              </div>
+              <Textarea
+                placeholder="Additional feedback (optional)"
+                value={feedbackComment}
+                onChange={(e) => !existingFeedback && setFeedbackComment(e.target.value)}
+                className="h-24"
+                disabled={!!existingFeedback}
+              />
+              {!existingFeedback && (
+                <Button 
+                  onClick={handleSubmitFeedback}
+                  disabled={rating === null}
+                >
+                  Submit Feedback
+                </Button>
+              )}
+              {existingFeedback && (
+                <p className="text-sm text-zendesk-muted">
+                  Thank you for your feedback!
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {(userRole === 'admin' || userRole === 'agent') && (
           <div className="grid grid-cols-2 gap-4">
@@ -271,11 +595,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           </div>
         )}
 
-        <div>
-          <h3 className="font-medium text-zendesk-secondary">Description</h3>
-          <p className="mt-2 text-zendesk-muted">{ticket.description}</p>
-        </div>
-
         <Separator />
 
         <div>
@@ -284,45 +603,60 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
             <h3 className="font-medium text-zendesk-secondary">Comments</h3>
           </div>
 
-          <ScrollArea className="h-[300px] pr-4">
-            <div className="space-y-4">
-              {loading ? (
-                <div className="text-center text-zendesk-muted">Loading comments...</div>
-              ) : comments.length > 0 ? (
-                comments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className="bg-gray-50 rounded-lg p-4 space-y-2"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-medium">{comment.user.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {comment.user.role}
-                        </Badge>
-                      </div>
-                      <span className="text-sm text-zendesk-muted">
-                        {comment.created_at}
-                      </span>
-                    </div>
-                    <p className="text-zendesk-muted">{comment.content}</p>
+          <div className="space-y-4">
+            <ScrollArea className="h-[300px] pr-4">
+              {comments.map((comment) => (
+                <div
+                  key={comment.id}
+                  className="mb-4 last:mb-0"
+                >
+                  <div className="flex items-center space-x-2 mb-1">
+                    <span className="font-medium text-zendesk-secondary">
+                      {comment.user.name}
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {comment.user.role}
+                    </Badge>
+                    <span className="text-sm text-zendesk-muted">
+                      {comment.created_at}
+                    </span>
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-zendesk-muted">No comments yet</div>
-              )}
+                  <div 
+                    className="bg-gray-50 rounded p-3 prose max-w-none"
+                    dangerouslySetInnerHTML={{ __html: comment.content }}
+                  />
+                  {commentAttachments[comment.id] && (
+                    <div className="mt-2">
+                      <AttachmentList
+                        attachments={commentAttachments[comment.id]}
+                        onDelete={handleDeleteAttachment}
+                        showDelete={userRole === 'admin' || currentUserId === comment.user.id}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </ScrollArea>
+            <div className="space-y-2">
+              <RichTextEditor
+                value={newComment}
+                onChange={setNewComment}
+                placeholder="Add a comment..."
+              />
+              <FileUpload
+                onFileSelect={handleFileSelect}
+                selectedFiles={pendingFiles}
+                onRemoveFile={handleRemoveFile}
+              />
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleAddComment}
+                  disabled={!newComment.trim() && pendingFiles.length === 0}
+                >
+                  Send Comment
+                </Button>
+              </div>
             </div>
-          </ScrollArea>
-
-          <div className="mt-4 space-y-2">
-            <textarea
-              className="w-full p-2 border rounded-md"
-              rows={3}
-              placeholder="Add a comment..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-            />
-            <Button onClick={handleAddComment}>Add Comment</Button>
           </div>
         </div>
       </div>

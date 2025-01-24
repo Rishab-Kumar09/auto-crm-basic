@@ -29,7 +29,7 @@ const Dashboard = () => {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, company_id')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -71,7 +71,40 @@ const Dashboard = () => {
         return stats;
       }
 
-      // For admins and customers, get overall stats
+      // For admins, get company-specific stats
+      if (profile?.role === 'admin' && profile?.company_id) {
+        const { data: tickets, error } = await supabase
+          .from('tickets')
+          .select('status')
+          .eq('company_id', profile.company_id);
+
+        if (error) {
+          console.error('Error fetching tickets:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load tickets",
+            variant: "destructive",
+          });
+          return {
+            total_tickets: 0,
+            resolved_tickets: 0,
+            open_tickets: 0,
+            in_progress_tickets: 0
+          };
+        }
+
+        const stats = tickets.reduce((acc, ticket) => {
+          acc.total_tickets++;
+          if (ticket.status === 'open') acc.open_tickets++;
+          if (ticket.status === 'in_progress') acc.in_progress_tickets++;
+          if (ticket.status === 'closed') acc.resolved_tickets++;
+          return acc;
+        }, { total_tickets: 0, open_tickets: 0, in_progress_tickets: 0, resolved_tickets: 0 });
+
+        return stats;
+      }
+
+      // For customers, get overall stats
       const { data, error } = await supabase
         .from('tickets')
         .select('status');

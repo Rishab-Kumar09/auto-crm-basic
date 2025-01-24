@@ -56,6 +56,67 @@ export type Database = {
           },
         ]
       }
+      attachments: {
+        Row: {
+          id: string
+          file_name: string
+          file_type: string
+          file_size: number
+          file_path: string
+          uploaded_by: string
+          ticket_id: string | null
+          comment_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          file_name: string
+          file_type: string
+          file_size: number
+          file_path: string
+          uploaded_by: string
+          ticket_id?: string | null
+          comment_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          file_name?: string
+          file_type?: string
+          file_size?: number
+          file_path?: string
+          uploaded_by?: string
+          ticket_id?: string | null
+          comment_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       chat_messages: {
         Row: {
           content: string

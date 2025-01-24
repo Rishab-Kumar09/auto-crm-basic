@@ -37,7 +37,7 @@ const TicketList = () => {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, company_id')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -70,6 +70,9 @@ const TicketList = () => {
       // For agents, only fetch assigned tickets
       if (profile?.role === 'agent') {
         query.eq('assignee_id', user.id);
+      } else if (profile?.role === 'admin' && profile?.company_id) {
+        // For admins, only fetch tickets from their company
+        query.eq('company_id', profile.company_id);
       }
 
       const { data: ticketsData, error } = await query;
@@ -260,21 +263,23 @@ const TicketList = () => {
               <SelectItem value="closed">Closed</SelectItem>
             </SelectContent>
           </Select>
-          <Select
-            value={priorityFilter}
-            onValueChange={(value) => setPriorityFilter(value as TicketPriority | "all")}
-          >
-            <SelectTrigger className="w-[180px]">
-              <User className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Filter by priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-            </SelectContent>
-          </Select>
+          {userRole !== 'customer' && (
+            <Select
+              value={priorityFilter}
+              onValueChange={(value) => setPriorityFilter(value as TicketPriority | "all")}
+            >
+              <SelectTrigger className="w-[180px]">
+                <User className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filter by priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
       <div className="divide-y divide-zendesk-border">
