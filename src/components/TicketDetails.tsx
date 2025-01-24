@@ -379,7 +379,17 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         title: 'Success',
         description: 'Ticket status updated successfully.',
       });
-      onClose();
+
+      // Auto refresh page when ticket is closed
+      if (newStatus === 'closed') {
+        toast({
+          title: 'Info',
+          description: 'Page will refresh in 2 seconds...',
+        });
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }
     } catch (error) {
       console.error('Error updating ticket status:', error);
       toast({
@@ -406,7 +416,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         title: 'Success',
         description: 'Ticket priority updated successfully.',
       });
-      onClose();
     } catch (error) {
       console.error('Error updating ticket priority:', error);
       toast({
@@ -439,7 +448,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         title: 'Success',
         description: 'Agent assigned successfully.',
       });
-      onClose();
     } catch (error) {
       console.error('Error assigning agent:', error);
       toast({
