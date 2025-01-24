@@ -114,7 +114,10 @@ const Dashboard = () => {
       }
 
       // For customers, get overall stats
-      const { data, error } = await supabase.from('tickets').select('status');
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('status')
+        .eq('customer_id', user.id);
 
       if (error) {
         console.error('Error fetching tickets:', error);
