@@ -35,8 +35,9 @@ interface Attachment {
   comment_id?: string;
 }
 
-const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
+const TicketDetails = ({ ticket: initialTicket, onClose }: TicketDetailsProps) => {
   const { toast } = useToast();
+  const [ticket, setTicket] = useState<Ticket>(initialTicket);
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
@@ -375,6 +376,13 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
       if (error) throw error;
 
+      // Update local ticket state
+      setTicket(prev => ({
+        ...prev,
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      }));
+
       toast({
         title: 'Success',
         description: 'Ticket status updated successfully.',
@@ -412,6 +420,13 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
       if (error) throw error;
 
+      // Update local ticket state
+      setTicket(prev => ({
+        ...prev,
+        priority: newPriority,
+        updated_at: new Date().toISOString()
+      }));
+
       toast({
         title: 'Success',
         description: 'Ticket priority updated successfully.',
@@ -443,6 +458,22 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .filter('id', 'eq', ticket.id);
 
       if (ticketError) throw ticketError;
+
+      // Find the assigned agent from availableAgents
+      const assignedAgent = availableAgents.find(agent => agent.id === agentId);
+      if (assignedAgent) {
+        // Update local ticket state
+        setTicket(prev => ({
+          ...prev,
+          assignedTo: {
+            id: assignedAgent.id,
+            name: assignedAgent.name,
+            email: '', // These fields might need to be fetched if required
+            role: 'agent' as UserRole
+          },
+          updated_at: new Date().toISOString()
+        }));
+      }
 
       toast({
         title: 'Success',
