@@ -121,6 +121,9 @@ const Agents = () => {
               console.error('Error fetching feedback:', feedbackError);
               return {
                 ...agent,
+                tickets: [...agent.tickets].sort(
+                  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                ),
                 average_rating: null,
                 total_ratings: 0,
               };
@@ -134,6 +137,9 @@ const Agents = () => {
 
             return {
               ...agent,
+              tickets: [...agent.tickets].sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              ),
               average_rating: averageRating,
               total_ratings: totalRatings,
             };

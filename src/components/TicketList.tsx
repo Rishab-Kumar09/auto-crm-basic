@@ -65,7 +65,7 @@ const TicketList = () => {
             id,
             name
           )
-        `);
+        `).order('created_at', { ascending: false });
 
       // For agents, only fetch assigned tickets
       if (profile?.role === 'agent') {
