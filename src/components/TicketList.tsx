@@ -73,6 +73,9 @@ const TicketList = () => {
       } else if (profile?.role === 'admin' && profile?.company_id) {
         // For admins, only fetch tickets from their company
         query.eq('company_id', profile.company_id);
+      } else if (profile?.role === 'customer') {
+        // For customers, only fetch their own tickets
+        query.eq('customer_id', user.id);
       }
 
       const { data: ticketsData, error } = await query;
