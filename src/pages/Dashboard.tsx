@@ -6,6 +6,7 @@ import { UserRole } from "@/types/ticket";
 import StatsCards from "@/components/dashboard/StatsCards";
 import TicketChart from "@/components/dashboard/TicketChart";
 import AgentPerformance from "@/components/dashboard/AgentPerformance";
+import CustomerRatings from "@/components/dashboard/CustomerRatings";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -184,6 +185,12 @@ const Dashboard = () => {
           <div className="mt-6">
             <TicketChart data={chartData} />
           </div>
+
+          {userRole === 'admin' && (
+            <div className="mt-6">
+              <CustomerRatings />
+            </div>
+          )}
 
           {userRole === 'agent' && <AgentPerformance />}
         </main>

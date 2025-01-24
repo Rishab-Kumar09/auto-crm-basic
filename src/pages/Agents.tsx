@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Star } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -20,6 +21,8 @@ interface Agent {
   id: string;
   email: string;
   full_name: string | null;
+  average_rating: number | null;
+  total_ratings: number;
   tickets: {
     id: string;
     title: string;
@@ -95,7 +98,42 @@ const Agents = () => {
           return;
         }
 
-        setAgents(agentsData as Agent[]);
+        const agentsWithRatings = await Promise.all(
+          (agentsData as Agent[]).map(async (agent) => {
+            const { data: feedback, error: feedbackError } = await supabase
+              .from('feedback')
+              .select(`
+                rating,
+                tickets!inner (
+                  id
+                )
+              `)
+              .eq('tickets.assignee_id', agent.id)
+              .not('rating', 'is', null);
+
+            if (feedbackError) {
+              console.error('Error fetching feedback:', feedbackError);
+              return {
+                ...agent,
+                average_rating: null,
+                total_ratings: 0
+              };
+            }
+
+            const totalRatings = feedback.length;
+            const averageRating = totalRatings > 0
+              ? Number((feedback.reduce((sum, f) => sum + f.rating, 0) / totalRatings).toFixed(1))
+              : null;
+
+            return {
+              ...agent,
+              average_rating: averageRating,
+              total_ratings: totalRatings
+            };
+          })
+        );
+
+        setAgents(agentsWithRatings);
       } catch (error) {
         console.error('Error:', error);
         toast({
@@ -153,9 +191,22 @@ const Agents = () => {
               {agents.map((agent) => (
                 <Card key={agent.id}>
                   <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg">
-                      {agent.full_name || agent.email}
-                    </CardTitle>
+                    <div className="flex items-center space-x-4">
+                      <CardTitle className="text-lg">
+                        {agent.full_name || agent.email}
+                      </CardTitle>
+                      {agent.average_rating !== null && (
+                        <div className="flex items-center space-x-2">
+                          <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                          <span className="font-medium">
+                            {agent.average_rating}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            ({agent.total_ratings} rating{agent.total_ratings !== 1 ? 's' : ''})
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     <Badge 
                       variant="secondary" 
                       className="text-base px-3 py-1 bg-blue-100 text-blue-800"
