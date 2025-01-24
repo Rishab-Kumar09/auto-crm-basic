@@ -46,7 +46,14 @@ const Tickets = () => {
               </Button>
             )}
           </div>
-          {showForm && userRole === 'customer' ? <TicketForm /> : <TicketList />}
+          {showForm && userRole === 'customer' ? (
+            <TicketForm 
+              onSuccess={() => setShowForm(false)}
+              onCancel={() => setShowForm(false)}
+            />
+          ) : (
+            <TicketList />
+          )}
         </main>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import RichTextEditor from "@/components/RichTextEditor";
 import FileUpload from "./FileUpload";
+import CompanySelect from "./CompanySelect";
 
 interface TicketFormProps {
   onSuccess: () => void;
@@ -23,24 +24,18 @@ const TicketForm = ({ onSuccess, onCancel }: TicketFormProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) return;
+    if (!title.trim() || !description.trim() || !selectedCompanyId) return;
 
     setIsSubmitting(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
-
-      // Get user's company ID
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
 
       // Create ticket
       const { data: ticket, error: ticketError } = await supabase
@@ -49,7 +44,7 @@ const TicketForm = ({ onSuccess, onCancel }: TicketFormProps) => {
           title,
           description,
           customer_id: user.id,
-          company_id: profile?.company_id,
+          company_id: selectedCompanyId,
           status: "open",
           priority: "low",
         })
@@ -58,17 +53,34 @@ const TicketForm = ({ onSuccess, onCancel }: TicketFormProps) => {
 
       if (ticketError) throw ticketError;
 
-      // Add attachments if any
-      if (pendingAttachments.length > 0) {
-        const { error: attachmentError } = await supabase
-          .from('attachments')
-          .insert(
-            pendingAttachments.map(file => ({
-              ...file,
+      // Upload files to storage and create attachments
+      if (selectedFiles.length > 0) {
+        const attachments = await Promise.all(
+          selectedFiles.map(async (file) => {
+            const filePath = `${Date.now()}-${file.name}`;
+            
+            // Upload to storage
+            const { error: uploadError } = await supabase.storage
+              .from('attachments')
+              .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            return {
+              file_name: file.name,
+              file_type: file.type,
+              file_size: file.size,
+              file_path: filePath,
               ticket_id: ticket.id,
               uploaded_by: user.id,
-            }))
-          );
+            };
+          })
+        );
+
+        // Create attachment records
+        const { error: attachmentError } = await supabase
+          .from('attachments')
+          .insert(attachments);
 
         if (attachmentError) throw attachmentError;
       }
@@ -85,13 +97,26 @@ const TicketForm = ({ onSuccess, onCancel }: TicketFormProps) => {
         description: "Failed to create ticket. Please try again.",
         variant: "destructive",
       });
+
+      // Clean up any uploaded files if ticket creation failed
+      selectedFiles.forEach(file => {
+        const filePath = `${Date.now()}-${file.name}`;
+        supabase.storage
+          .from('attachments')
+          .remove([filePath])
+          .catch(console.error);
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleAttachmentUpload = (files: Attachment[]) => {
-    setPendingAttachments(files);
+  const handleFileSelect = (files: File[]) => {
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -105,6 +130,12 @@ const TicketForm = ({ onSuccess, onCancel }: TicketFormProps) => {
         />
       </div>
       <div>
+        <CompanySelect
+          selectedId={selectedCompanyId}
+          onSelect={setSelectedCompanyId}
+        />
+      </div>
+      <div>
         <RichTextEditor
           value={description}
           onChange={setDescription}
@@ -113,7 +144,9 @@ const TicketForm = ({ onSuccess, onCancel }: TicketFormProps) => {
       </div>
       <div>
         <FileUpload
-          onUploadComplete={handleAttachmentUpload}
+          onFileSelect={handleFileSelect}
+          selectedFiles={selectedFiles}
+          onRemoveFile={handleRemoveFile}
         />
       </div>
       <div className="flex justify-end space-x-2">
@@ -127,7 +160,7 @@ const TicketForm = ({ onSuccess, onCancel }: TicketFormProps) => {
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !title.trim() || !description.trim()}
+          disabled={isSubmitting || !title.trim() || !description.trim() || !selectedCompanyId}
         >
           {isSubmitting ? "Creating..." : "Create Ticket"}
         </Button>

@@ -46,7 +46,14 @@ const Index = () => {
               </Button>
             )}
           </div>
-          {showForm && userRole !== 'agent' ? <TicketForm /> : <TicketList />}
+          {showForm && userRole !== 'agent' ? (
+            <TicketForm 
+              onSuccess={() => setShowForm(false)} 
+              onCancel={() => setShowForm(false)} 
+            />
+          ) : (
+            <TicketList />
+          )}
         </main>
       </div>
     </div>

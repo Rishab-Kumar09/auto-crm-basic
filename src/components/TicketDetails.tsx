@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, MessageSquare, User, Building, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Ticket, TicketComment, UserRole, TicketStatus } from "@/types/ticket";
+import { Ticket, TicketComment, UserRole, TicketStatus, TicketPriority } from "@/types/ticket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -63,9 +63,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     
     initializeData();
     fetchFeedback();
-    if (userRole === 'admin') {
-      fetchAvailableAgents();
-    }
   }, [ticket.id]);
 
   const fetchUserRole = async () => {
@@ -78,7 +75,11 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .maybeSingle();
       
       if (profile) {
-        setUserRole(profile.role as UserRole);
+        const role = profile.role as UserRole;
+        setUserRole(role);
+        if (role === 'admin') {
+          await fetchAvailableAgents();
+        }
       }
     }
   };
@@ -362,6 +363,33 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     }
   };
 
+  const handleUpdatePriority = async (newPriority: TicketPriority) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({
+          priority: newPriority,
+          updated_at: new Date().toISOString()
+        })
+        .filter('id', 'eq', ticket.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Ticket priority updated successfully.",
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error updating ticket priority:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update ticket priority. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAssignAgent = async (agentId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -570,7 +598,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         )}
 
         {(userRole === 'admin' || userRole === 'agent') && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Status</label>
               <Select
@@ -588,10 +616,30 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
               </Select>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-1">Priority</label>
+              <Select
+                value={ticket.priority}
+                onValueChange={(value) => handleUpdatePriority(value as TicketPriority)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Set priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {userRole === 'admin' && (
               <div>
                 <label className="block text-sm font-medium mb-1">Assign Agent</label>
-                <Select onValueChange={handleAssignAgent}>
+                <Select 
+                  value={ticket.assignedTo?.id || undefined} 
+                  onValueChange={handleAssignAgent}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select agent" />
                   </SelectTrigger>
