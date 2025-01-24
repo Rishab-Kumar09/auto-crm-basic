@@ -616,42 +616,44 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
               </Select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Priority</label>
-              <Select
-                value={ticket.priority}
-                onValueChange={(value) => handleUpdatePriority(value as TicketPriority)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Set priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             {userRole === 'admin' && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Assign Agent</label>
-                <Select 
-                  value={ticket.assignedTo?.id || undefined} 
-                  onValueChange={handleAssignAgent}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select agent" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableAgents.map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        {agent.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Priority</label>
+                  <Select
+                    value={ticket.priority}
+                    onValueChange={(value) => handleUpdatePriority(value as TicketPriority)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Set priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Assign Agent</label>
+                  <Select 
+                    value={ticket.assignedTo?.id || undefined} 
+                    onValueChange={handleAssignAgent}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select agent" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableAgents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
           </div>
         )}
