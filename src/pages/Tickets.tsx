@@ -1,26 +1,28 @@
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
-import TicketList from "@/components/TicketList";
-import TicketForm from "@/components/TicketForm";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { UserRole } from "@/types/ticket";
+import Sidebar from '@/components/Sidebar';
+import Header from '@/components/Header';
+import TicketList from '@/components/TicketList';
+import TicketForm from '@/components/TicketForm';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { UserRole } from '@/types/ticket';
 
 const Tickets = () => {
   const [showForm, setShowForm] = useState(false);
-  const [userRole, setUserRole] = useState<UserRole>("customer");
+  const [userRole, setUserRole] = useState<UserRole>('customer');
 
   useEffect(() => {
     const fetchUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .maybeSingle();
-        
+
         if (profile) {
           setUserRole(profile.role as UserRole);
         }
@@ -42,15 +44,12 @@ const Tickets = () => {
             </h1>
             {userRole === 'customer' && (
               <Button onClick={() => setShowForm(!showForm)}>
-                {showForm ? "View Tickets" : "Create Ticket"}
+                {showForm ? 'View Tickets' : 'Create Ticket'}
               </Button>
             )}
           </div>
           {showForm && userRole === 'customer' ? (
-            <TicketForm 
-              onSuccess={() => setShowForm(false)}
-              onCancel={() => setShowForm(false)}
-            />
+            <TicketForm onSuccess={() => setShowForm(false)} onCancel={() => setShowForm(false)} />
           ) : (
             <TicketList />
           )}

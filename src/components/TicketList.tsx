@@ -1,38 +1,40 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useSearchParams } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { Ticket, TicketStatus, TicketPriority, UserRole } from "@/types/ticket";
-import { useState, useEffect } from "react";
-import { MessageSquare, User, Filter, Clock, Building } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useSearchParams } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { Ticket, TicketStatus, TicketPriority, UserRole } from '@/types/ticket';
+import { useState, useEffect } from 'react';
+import { MessageSquare, User, Filter, Clock, Building } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import TicketDetails from "./TicketDetails";
-import CompanySelect from "./CompanySelect";
+} from '@/components/ui/select';
+import TicketDetails from './TicketDetails';
+import CompanySelect from './CompanySelect';
 
 const TicketList = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<UserRole>("customer");
-  const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
-  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
+  const [userRole, setUserRole] = useState<UserRole>('customer');
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const searchQuery = searchParams.get("q")?.toLowerCase();
+  const searchQuery = searchParams.get('q')?.toLowerCase();
 
   // Fetch tickets function
   const fetchTickets = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data: profile } = await supabase
@@ -45,9 +47,7 @@ const TicketList = () => {
         setUserRole(profile.role as UserRole);
       }
 
-      const query = supabase
-        .from('tickets')
-        .select(`
+      const query = supabase.from('tickets').select(`
           *,
           customer:profiles!tickets_customer_id_fkey (
             id,
@@ -113,9 +113,9 @@ const TicketList = () => {
     } catch (error) {
       console.error('Error:', error);
       toast({
-        title: "Error",
-        description: "Failed to load tickets. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load tickets. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -128,14 +128,16 @@ const TicketList = () => {
 
   useEffect(() => {
     const fetchUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .single();
-        
+
         if (profile) {
           setUserRole(profile.role as UserRole);
         }
@@ -154,13 +156,13 @@ const TicketList = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'tickets'
+          table: 'tickets',
         },
         (payload) => {
           console.log('Change received!', payload);
           toast({
-            title: "Ticket Updated",
-            description: "The ticket list has been refreshed.",
+            title: 'Ticket Updated',
+            description: 'The ticket list has been refreshed.',
           });
           fetchTickets(); // Refresh the entire list when any change occurs
         }
@@ -178,8 +180,8 @@ const TicketList = () => {
         ticket.customer.name.toLowerCase().includes(searchQuery)
       : true;
 
-    const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
-    const matchesPriority = priorityFilter === "all" || ticket.priority === priorityFilter;
+    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
     const matchesCompany = !companyFilter || ticket.company?.id === companyFilter;
 
     return matchesSearch && matchesStatus && matchesPriority && matchesCompany;
@@ -191,66 +193,59 @@ const TicketList = () => {
 
   const getStatusColor = (status: TicketStatus) => {
     switch (status) {
-      case "open":
-        return "bg-red-100 text-red-800";
-      case "in_progress":
-        return "bg-yellow-100 text-yellow-800";
-      case "closed":
-        return "bg-green-100 text-green-800";
+      case 'open':
+        return 'bg-red-100 text-red-800';
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'closed':
+        return 'bg-green-100 text-green-800';
       default:
-        return "bg-gray-100 text-gray-800";
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getPriorityColor = (priority: TicketPriority) => {
     switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      case "low":
-        return "bg-green-100 text-green-800";
+      case 'high':
+        return 'bg-red-100 text-red-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'low':
+        return 'bg-green-100 text-green-800';
       default:
-        return "bg-gray-100 text-gray-800";
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-8">
-        <div className="text-center text-zendesk-muted">
-          Loading tickets...
-        </div>
+        <div className="text-center text-zendesk-muted">Loading tickets...</div>
       </div>
     );
   }
 
   if (selectedTicket) {
-    return (
-      <TicketDetails
-        ticket={selectedTicket}
-        onClose={() => setSelectedTicket(null)}
-      />
-    );
+    return <TicketDetails ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />;
   }
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
       <div className="p-4 border-b border-zendesk-border flex justify-between items-center">
         <h2 className="text-lg font-semibold text-zendesk-secondary">
-          {searchQuery ? `Search Results (${filteredTickets.length})` : 
-           userRole === 'agent' ? "My Assigned Tickets" : "All Tickets"}
+          {searchQuery
+            ? `Search Results (${filteredTickets.length})`
+            : userRole === 'agent'
+              ? 'My Assigned Tickets'
+              : 'All Tickets'}
         </h2>
         <div className="flex items-center gap-4">
           {userRole === 'customer' && (
-            <CompanySelect
-              selectedId={companyFilter}
-              onSelect={setCompanyFilter}
-            />
+            <CompanySelect selectedId={companyFilter} onSelect={setCompanyFilter} />
           )}
           <Select
             value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as TicketStatus | "all")}
+            onValueChange={(value) => setStatusFilter(value as TicketStatus | 'all')}
           >
             <SelectTrigger className="w-[180px]">
               <Filter className="w-4 h-4 mr-2" />
@@ -266,7 +261,7 @@ const TicketList = () => {
           {userRole !== 'customer' && (
             <Select
               value={priorityFilter}
-              onValueChange={(value) => setPriorityFilter(value as TicketPriority | "all")}
+              onValueChange={(value) => setPriorityFilter(value as TicketPriority | 'all')}
             >
               <SelectTrigger className="w-[180px]">
                 <User className="w-4 h-4 mr-2" />
@@ -313,14 +308,14 @@ const TicketList = () => {
                 <div className="flex items-center space-x-3">
                   <Badge
                     variant="secondary"
-                    className={cn("text-xs", getStatusColor(ticket.status))}
+                    className={cn('text-xs', getStatusColor(ticket.status))}
                   >
                     {ticket.status.replace('_', ' ')}
                   </Badge>
                   {userRole !== 'customer' && (
                     <Badge
                       variant="secondary"
-                      className={cn("text-xs", getPriorityColor(ticket.priority))}
+                      className={cn('text-xs', getPriorityColor(ticket.priority))}
                     >
                       {ticket.priority}
                     </Badge>

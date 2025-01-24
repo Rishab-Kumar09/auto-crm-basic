@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,14 +22,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
   const execCommand = (command: string, value: string | undefined = undefined) => {
     if (editorRef.current) {
       editorRef.current.focus();
-      
+
       // Special handling for lists
       if (command === 'insertUnorderedList') {
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
           const parentList = range.commonAncestorContainer.parentElement;
-          
+
           // If we're already in a list, remove it
           if (parentList?.tagName === 'LI' || parentList?.tagName === 'UL') {
             document.execCommand('outdent', false);
@@ -45,7 +45,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         // For other commands, execute normally
         document.execCommand(command, false, value);
       }
-      
+
       onChange(editorRef.current.innerHTML);
     }
   };
@@ -62,7 +62,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         const parentList = range.commonAncestorContainer.parentElement;
-        
+
         // If we're in an empty list item, remove it and exit the list
         if (parentList?.tagName === 'LI' && parentList.textContent?.trim() === '') {
           e.preventDefault();
@@ -136,10 +136,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         ref={editorRef}
         contentEditable
         className={cn(
-          "p-3 min-h-[150px] focus:outline-none",
-          "before:content-[attr(data-placeholder)] before:text-gray-400 before:pointer-events-none",
-          value === "" && !isFocused && "before:block",
-          value !== "" && "before:hidden"
+          'p-3 min-h-[150px] focus:outline-none',
+          'before:content-[attr(data-placeholder)] before:text-gray-400 before:pointer-events-none',
+          value === '' && !isFocused && 'before:block',
+          value !== '' && 'before:hidden'
         )}
         data-placeholder={placeholder}
         onInput={(e) => onChange(e.currentTarget.innerHTML)}
@@ -152,4 +152,4 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
   );
 };
 
-export default RichTextEditor; 
+export default RichTextEditor;

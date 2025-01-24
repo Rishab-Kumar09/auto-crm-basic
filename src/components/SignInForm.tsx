@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SignInFormProps {
   onSuccess: () => void;
@@ -9,8 +9,8 @@ interface SignInFormProps {
 }
 
 const SignInForm = ({ onSuccess, onError }: SignInFormProps) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -20,15 +20,15 @@ const SignInForm = ({ onSuccess, onError }: SignInFormProps) => {
     try {
       // First ensure we're completely signed out
       await supabase.auth.signOut({ scope: 'local' });
-      
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          throw new Error("The email or password you entered is incorrect.");
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('The email or password you entered is incorrect.');
         }
         throw error;
       }
@@ -61,12 +61,8 @@ const SignInForm = ({ onSuccess, onError }: SignInFormProps) => {
           required
         />
       </div>
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isLoading}
-      >
-        {isLoading ? "Signing in..." : "Sign in"}
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? 'Signing in...' : 'Sign in'}
       </Button>
     </form>
   );

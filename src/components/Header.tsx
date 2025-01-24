@@ -1,20 +1,20 @@
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useToast } from '@/components/ui/use-toast';
 
 const Header = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchValue, setSearchValue] = useState(searchParams.get("q") || "");
+  const [searchValue, setSearchValue] = useState(searchParams.get('q') || '');
   const { toast } = useToast();
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSearchParams(searchValue ? { q: searchValue } : {});
     toast({
-      title: "Search updated",
-      description: searchValue ? `Showing results for "${searchValue}"` : "Showing all tickets",
+      title: 'Search updated',
+      description: searchValue ? `Showing results for "${searchValue}"` : 'Showing all tickets',
     });
   };
 

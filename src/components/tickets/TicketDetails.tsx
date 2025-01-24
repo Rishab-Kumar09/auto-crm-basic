@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { Clock, User } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { Ticket, Comment, TicketStatus } from "@/types/ticket";
-import TicketComments from "./TicketComments";
-import TicketStatusSelect from "./TicketStatusSelect";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import { Clock, User } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Ticket, Comment, TicketStatus } from '@/types/ticket';
+import TicketComments from './TicketComments';
+import TicketStatusSelect from './TicketStatusSelect';
 
 interface TicketDetailsProps {
   ticket: Ticket;
@@ -26,8 +26,9 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
   const fetchComments = async () => {
     try {
       const { data, error } = await supabase
-        .from("comments")
-        .select(`
+        .from('comments')
+        .select(
+          `
           *,
           user:profiles!comments_user_id_fkey (
             id,
@@ -35,9 +36,10 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
             email,
             role
           )
-        `)
-        .eq("ticket_id", ticket.id)
-        .order("created_at", { ascending: true });
+        `
+        )
+        .eq('ticket_id', ticket.id)
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
@@ -47,7 +49,7 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
           content: comment.content,
           user: {
             id: comment.user.id,
-            name: comment.user.full_name || "Unknown User",
+            name: comment.user.full_name || 'Unknown User',
             email: comment.user.email,
             role: comment.user.role,
           },
@@ -55,11 +57,11 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
         }))
       );
     } catch (error) {
-      console.error("Error fetching comments:", error);
+      console.error('Error fetching comments:', error);
       toast({
-        title: "Error",
-        description: "Failed to load comments. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load comments. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -70,23 +72,23 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
     setUpdating(true);
     try {
       const { error } = await supabase
-        .from("tickets")
+        .from('tickets')
         .update({ status: newStatus })
-        .eq("id", ticket.id);
+        .eq('id', ticket.id);
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Ticket status updated successfully",
+        title: 'Success',
+        description: 'Ticket status updated successfully',
       });
       onUpdate();
     } catch (error) {
-      console.error("Error updating ticket:", error);
+      console.error('Error updating ticket:', error);
       toast({
-        title: "Error",
-        description: "Failed to update ticket status. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update ticket status. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setUpdating(false);
@@ -98,9 +100,7 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">
-              {ticket.title}
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-900">{ticket.title}</h2>
             <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
               <div className="flex items-center space-x-1">
                 <User className="w-4 h-4" />

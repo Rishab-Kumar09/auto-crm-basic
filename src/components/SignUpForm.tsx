@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { UserRole } from "@/types/ticket";
-import CompanySelect from "./CompanySelect";
+} from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { UserRole } from '@/types/ticket';
+import CompanySelect from './CompanySelect';
 
 interface SignUpFormProps {
   onSuccess: () => void;
@@ -18,11 +18,11 @@ interface SignUpFormProps {
 }
 
 const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<UserRole>("customer");
-  const [companyName, setCompanyName] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState<UserRole>('customer');
+  const [companyName, setCompanyName] = useState('');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,21 +33,21 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
     try {
       // First, if admin, create the company
       let companyId: string | undefined;
-      
-      if (role === "admin") {
+
+      if (role === 'admin') {
         const { data: company, error: companyError } = await supabase
-          .from("companies")
+          .from('companies')
           .insert([{ name: companyName }])
           .select()
           .single();
 
         if (companyError) {
-          throw new Error("Failed to create company: " + companyError.message);
+          throw new Error('Failed to create company: ' + companyError.message);
         }
-        
+
         companyId = company.id;
-      } else if (role === "agent" && !selectedCompanyId) {
-        throw new Error("Please select a company");
+      } else if (role === 'agent' && !selectedCompanyId) {
+        throw new Error('Please select a company');
       }
 
       // Then create the user
@@ -62,25 +62,25 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
       });
 
       if (signUpError) {
-        if (signUpError.message.includes("User already registered")) {
-          throw new Error("This email is already registered. Please sign in instead.");
+        if (signUpError.message.includes('User already registered')) {
+          throw new Error('This email is already registered. Please sign in instead.');
         }
         throw signUpError;
       }
 
       // Create profile with selected role and company if admin or agent
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([{ 
+      const { error: profileError } = await supabase.from('profiles').insert([
+        {
           id: (await supabase.auth.getUser()).data.user?.id,
           email,
           full_name: fullName,
           role,
-          company_id: role === "admin" ? companyId : selectedCompanyId
-        }]);
+          company_id: role === 'admin' ? companyId : selectedCompanyId,
+        },
+      ]);
 
       if (profileError) {
-        throw new Error("Failed to create user profile");
+        throw new Error('Failed to create user profile');
       }
 
       onSuccess();
@@ -103,10 +103,7 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
         />
       </div>
       <div>
-        <Select
-          value={role}
-          onValueChange={(value: UserRole) => setRole(value)}
-        >
+        <Select value={role} onValueChange={(value: UserRole) => setRole(value)}>
           <SelectTrigger>
             <SelectValue placeholder="Select your role" />
           </SelectTrigger>
@@ -117,7 +114,7 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
           </SelectContent>
         </Select>
       </div>
-      {role === "admin" && (
+      {role === 'admin' && (
         <div>
           <Input
             type="text"
@@ -128,12 +125,9 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
           />
         </div>
       )}
-      {role === "agent" && (
+      {role === 'agent' && (
         <div>
-          <CompanySelect
-            onSelect={setSelectedCompanyId}
-            selectedId={selectedCompanyId}
-          />
+          <CompanySelect onSelect={setSelectedCompanyId} selectedId={selectedCompanyId} />
         </div>
       )}
       <div>
@@ -154,12 +148,8 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
           required
         />
       </div>
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isLoading}
-      >
-        {isLoading ? "Creating account..." : "Sign up"}
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? 'Creating account...' : 'Sign up'}
       </Button>
     </form>
   );

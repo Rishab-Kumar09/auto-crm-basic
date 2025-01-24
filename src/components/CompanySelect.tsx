@@ -1,15 +1,15 @@
-import { Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+} from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface CompanySelectProps {
   onSelect: (companyId: string | null) => void;
@@ -18,27 +18,28 @@ interface CompanySelectProps {
 
 const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
   const { toast } = useToast();
-  
-  const { data: companies = [], isLoading, error } = useQuery({
-    queryKey: ["companies"],
+
+  const {
+    data: companies = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['companies'],
     queryFn: async () => {
-      console.log("Fetching companies...");
-      const { data, error } = await supabase
-        .from("companies")
-        .select("id, name")
-        .order("name");
-      
+      console.log('Fetching companies...');
+      const { data, error } = await supabase.from('companies').select('id, name').order('name');
+
       if (error) {
-        console.error("Error fetching companies:", error);
+        console.error('Error fetching companies:', error);
         toast({
-          title: "Error",
-          description: "Failed to load companies. Please try again.",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Failed to load companies. Please try again.',
+          variant: 'destructive',
         });
         throw error;
       }
 
-      console.log("Companies fetched:", data);
+      console.log('Companies fetched:', data);
       return data || [];
     },
   });
@@ -49,16 +50,15 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
 
   return (
     <Select
-      value={selectedId || ""}
+      value={selectedId || ''}
       onValueChange={(value) => onSelect(value)}
       disabled={isLoading}
     >
       <SelectTrigger className="w-full">
         <SelectValue placeholder="Select company">
           {isLoading
-            ? "Loading companies..."
-            : companies.find((company) => company.id === selectedId)?.name || "Select company"
-          }
+            ? 'Loading companies...'
+            : companies.find((company) => company.id === selectedId)?.name || 'Select company'}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -67,8 +67,8 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
             <div className="flex items-center">
               <Check
                 className={cn(
-                  "mr-2 h-4 w-4",
-                  selectedId === company.id ? "opacity-100" : "opacity-0"
+                  'mr-2 h-4 w-4',
+                  selectedId === company.id ? 'opacity-100' : 'opacity-0'
                 )}
               />
               {company.name}

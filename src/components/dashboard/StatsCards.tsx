@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart as BarChartIcon, TicketIcon, Users, CheckCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart as BarChartIcon, TicketIcon, Users, CheckCircle } from 'lucide-react';
 
 interface StatsCardsProps {
   stats: {

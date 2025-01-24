@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { Download, Loader2, Paperclip, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -19,7 +19,11 @@ interface AttachmentListProps {
   showDelete?: boolean;
 }
 
-export const AttachmentList = ({ attachments, onDelete, showDelete = false }: AttachmentListProps) => {
+export const AttachmentList = ({
+  attachments,
+  onDelete,
+  showDelete = false,
+}: AttachmentListProps) => {
   const { toast } = useToast();
   const [downloading, setDownloading] = useState<string | null>(null);
 
@@ -44,15 +48,15 @@ export const AttachmentList = ({ attachments, onDelete, showDelete = false }: At
       window.URL.revokeObjectURL(url);
 
       toast({
-        title: "Success",
-        description: "File downloaded successfully.",
+        title: 'Success',
+        description: 'File downloaded successfully.',
       });
     } catch (error) {
       console.error('Error downloading file:', error);
       toast({
-        title: "Error",
-        description: "Failed to download file. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to download file. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setDownloading(null);
@@ -108,4 +112,4 @@ export const AttachmentList = ({ attachments, onDelete, showDelete = false }: At
   );
 };
 
-export default AttachmentList; 
+export default AttachmentList;

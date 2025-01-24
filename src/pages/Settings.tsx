@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import Sidebar from '@/components/Sidebar';
+import Header from '@/components/Header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 const Settings = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -17,7 +17,9 @@ const Settings = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           const { data, error } = await supabase
             .from('profiles')
@@ -31,9 +33,9 @@ const Settings = () => {
       } catch (error) {
         console.error('Error fetching profile:', error);
         toast({
-          title: "Error",
-          description: "Could not fetch profile settings",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Could not fetch profile settings',
+          variant: 'destructive',
         });
       } finally {
         setLoading(false);
@@ -59,15 +61,15 @@ const Settings = () => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Profile updated successfully",
+        title: 'Success',
+        description: 'Profile updated successfully',
       });
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
-        title: "Error",
-        description: "Could not update profile",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Could not update profile',
+        variant: 'destructive',
       });
     } finally {
       setUpdating(false);
@@ -80,15 +82,11 @@ const Settings = () => {
       <div className="flex-1 flex flex-col">
         <Header />
         <main className="flex-1 p-6 overflow-auto">
-          <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">
-            Settings
-          </h1>
+          <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">Settings</h1>
 
           {loading ? (
             <Card>
-              <CardContent className="p-6">
-                Loading settings...
-              </CardContent>
+              <CardContent className="p-6">Loading settings...</CardContent>
             </Card>
           ) : (
             <div className="grid gap-6 max-w-xl">

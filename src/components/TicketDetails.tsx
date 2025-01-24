@@ -1,23 +1,23 @@
-import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { Clock, MessageSquare, User, Building, Star } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { Ticket, TicketComment, UserRole, TicketStatus, TicketPriority } from "@/types/ticket";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
+import { Clock, MessageSquare, User, Building, Star } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Ticket, TicketComment, UserRole, TicketStatus, TicketPriority } from '@/types/ticket';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import RichTextEditor from "@/components/RichTextEditor";
-import { Textarea } from "@/components/ui/textarea";
-import FileUpload from "./FileUpload";
-import AttachmentList from "./AttachmentList";
+} from '@/components/ui/select';
+import RichTextEditor from '@/components/RichTextEditor';
+import { Textarea } from '@/components/ui/textarea';
+import FileUpload from './FileUpload';
+import AttachmentList from './AttachmentList';
 
 interface TicketDetailsProps {
   ticket: Ticket;
@@ -38,13 +38,16 @@ interface Attachment {
 const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const { toast } = useToast();
   const [comments, setComments] = useState<TicketComment[]>([]);
-  const [newComment, setNewComment] = useState("");
+  const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<UserRole>("customer");
+  const [userRole, setUserRole] = useState<UserRole>('customer');
   const [availableAgents, setAvailableAgents] = useState<{ id: string; name: string }[]>([]);
   const [rating, setRating] = useState<number | null>(null);
-  const [feedbackComment, setFeedbackComment] = useState("");
-  const [existingFeedback, setExistingFeedback] = useState<{ rating: number; comment: string | null } | null>(null);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [existingFeedback, setExistingFeedback] = useState<{
+    rating: number;
+    comment: string | null;
+  } | null>(null);
   const [ticketAttachments, setTicketAttachments] = useState<Attachment[]>([]);
   const [commentAttachments, setCommentAttachments] = useState<{ [key: string]: Attachment[] }>({});
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -60,20 +63,22 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         await fetchAttachments(commentsData);
       }
     };
-    
+
     initializeData();
     fetchFeedback();
   }, [ticket.id]);
 
   const fetchUserRole = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .maybeSingle();
-      
+
       if (profile) {
         const role = profile.role as UserRole;
         setUserRole(role);
@@ -85,7 +90,9 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   };
 
   const fetchCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (user) {
       setCurrentUserId(user.id);
     }
@@ -96,20 +103,23 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       .from('profiles')
       .select('id, full_name')
       .eq('role', 'agent');
-    
+
     if (agents) {
-      setAvailableAgents(agents.map(agent => ({
-        id: agent.id,
-        name: agent.full_name || 'Unknown Agent'
-      })));
+      setAvailableAgents(
+        agents.map((agent) => ({
+          id: agent.id,
+          name: agent.full_name || 'Unknown Agent',
+        }))
+      );
     }
   };
 
   const fetchComments = async () => {
     try {
       const { data: commentsData, error } = await supabase
-        .from("comments")
-        .select(`
+        .from('comments')
+        .select(
+          `
           *,
           user:profiles!comments_user_id_fkey (
             id,
@@ -117,14 +127,15 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
             email,
             role
           )
-        `)
-        .eq("ticket_id", ticket.id)
-        .order("created_at", { ascending: true });
+        `
+        )
+        .eq('ticket_id', ticket.id)
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
       const formattedComments = commentsData
-        .filter(comment => comment.user != null)
+        .filter((comment) => comment.user != null)
         .map((comment: any) => ({
           id: comment.id,
           ticketId: comment.ticket_id,
@@ -141,11 +152,11 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       setLoading(false);
       return formattedComments;
     } catch (error) {
-      console.error("Error fetching comments:", error);
+      console.error('Error fetching comments:', error);
       toast({
-        title: "Error",
-        description: "Failed to load comments. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load comments. Please try again.',
+        variant: 'destructive',
       });
       setLoading(false);
       return null;
@@ -153,7 +164,9 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   };
 
   const fetchFeedback = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     const { data: feedback } = await supabase
@@ -198,13 +211,19 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       }
 
       // Log comment IDs being queried
-      console.log('Comment IDs being queried:', currentComments.map(comment => comment.id));
+      console.log(
+        'Comment IDs being queried:',
+        currentComments.map((comment) => comment.id)
+      );
 
       // Fetch comment attachments with debug info
       const { data: commentFiles, error: commentError } = await supabase
         .from('attachments')
         .select('*')
-        .in('comment_id', currentComments.map(comment => comment.id));
+        .in(
+          'comment_id',
+          currentComments.map((comment) => comment.id)
+        );
 
       if (commentError) {
         console.error('Error fetching comment attachments:', commentError);
@@ -214,43 +233,48 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       console.log('Raw comment attachments response:', commentFiles);
 
       // Group attachments by comment ID
-      const groupedAttachments = (commentFiles || []).reduce((acc, attachment) => {
-        if (attachment.comment_id) {
-          acc[attachment.comment_id] = [...(acc[attachment.comment_id] || []), attachment];
-        }
-        return acc;
-      }, {} as { [key: string]: Attachment[] });
+      const groupedAttachments = (commentFiles || []).reduce(
+        (acc, attachment) => {
+          if (attachment.comment_id) {
+            acc[attachment.comment_id] = [...(acc[attachment.comment_id] || []), attachment];
+          }
+          return acc;
+        },
+        {} as { [key: string]: Attachment[] }
+      );
 
       console.log('Grouped attachments by comment:', groupedAttachments);
       setCommentAttachments(groupedAttachments);
     } catch (error) {
       console.error('Error in fetchAttachments:', error);
       toast({
-        title: "Error",
-        description: "Failed to load attachments. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load attachments. Please try again.',
+        variant: 'destructive',
       });
     }
   };
 
   const handleFileSelect = (files: File[]) => {
-    setPendingFiles(prev => [...prev, ...files]);
+    setPendingFiles((prev) => [...prev, ...files]);
   };
 
   const handleRemoveFile = (index: number) => {
-    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddComment = async () => {
     if (!newComment.trim() && pendingFiles.length === 0) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
 
       // Add comment
       const { data: comment, error: commentError } = await supabase
-        .from("comments")
+        .from('comments')
         .insert({
           ticket_id: ticket.id,
           user_id: user.id,
@@ -265,7 +289,10 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
       // Upload and attach files if any
       if (pendingFiles.length > 0) {
-        console.log('Uploading files:', pendingFiles.map(f => f.name));
+        console.log(
+          'Uploading files:',
+          pendingFiles.map((f) => f.name)
+        );
         const uploadedFiles = [];
 
         for (const file of pendingFiles) {
@@ -297,7 +324,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         const { data: attachments, error: attachmentError } = await supabase
           .from('attachments')
           .insert(
-            uploadedFiles.map(file => ({
+            uploadedFiles.map((file) => ({
               ...file,
               comment_id: comment.id,
               uploaded_by: user.id,
@@ -319,19 +346,19 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         setComments(newComments);
         await fetchAttachments(newComments);
       }
-      
-      setNewComment("");
+
+      setNewComment('');
       setPendingFiles([]);
       toast({
-        title: "Success",
-        description: "Comment added successfully.",
+        title: 'Success',
+        description: 'Comment added successfully.',
       });
     } catch (error) {
-      console.error("Error adding comment:", error);
+      console.error('Error adding comment:', error);
       toast({
-        title: "Error",
-        description: "Failed to add comment. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to add comment. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -342,23 +369,23 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .from('tickets')
         .update({
           status: newStatus,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .filter('id', 'eq', ticket.id);
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Ticket status updated successfully.",
+        title: 'Success',
+        description: 'Ticket status updated successfully.',
       });
       onClose();
     } catch (error) {
-      console.error("Error updating ticket status:", error);
+      console.error('Error updating ticket status:', error);
       toast({
-        title: "Error",
-        description: "Failed to update ticket status. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update ticket status. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -369,30 +396,32 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .from('tickets')
         .update({
           priority: newPriority,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .filter('id', 'eq', ticket.id);
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Ticket priority updated successfully.",
+        title: 'Success',
+        description: 'Ticket priority updated successfully.',
       });
       onClose();
     } catch (error) {
-      console.error("Error updating ticket priority:", error);
+      console.error('Error updating ticket priority:', error);
       toast({
-        title: "Error",
-        description: "Failed to update ticket priority. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update ticket priority. Please try again.',
+        variant: 'destructive',
       });
     }
   };
 
   const handleAssignAgent = async (agentId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Update the ticket's assignee
@@ -400,23 +429,23 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .from('tickets')
         .update({
           assignee_id: agentId,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .filter('id', 'eq', ticket.id);
 
       if (ticketError) throw ticketError;
 
       toast({
-        title: "Success",
-        description: "Agent assigned successfully.",
+        title: 'Success',
+        description: 'Agent assigned successfully.',
       });
       onClose();
     } catch (error) {
-      console.error("Error assigning agent:", error);
+      console.error('Error assigning agent:', error);
       toast({
-        title: "Error",
-        description: "Failed to assign agent. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to assign agent. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -425,32 +454,32 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     if (rating === null) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
 
-      const { error } = await supabase
-        .from("feedback")
-        .upsert({
-          ticket_id: ticket.id,
-          user_id: user.id,
-          rating,
-          comment: feedbackComment || null,
-        });
+      const { error } = await supabase.from('feedback').upsert({
+        ticket_id: ticket.id,
+        user_id: user.id,
+        rating,
+        comment: feedbackComment || null,
+      });
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Thank you for your feedback!",
+        title: 'Success',
+        description: 'Thank you for your feedback!',
       });
-      
+
       setExistingFeedback({ rating, comment: feedbackComment });
     } catch (error) {
-      console.error("Error submitting feedback:", error);
+      console.error('Error submitting feedback:', error);
       toast({
-        title: "Error",
-        description: "Failed to submit feedback. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to submit feedback. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -481,10 +510,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       }
 
       // Then delete from database
-      const { error: dbError } = await supabase
-        .from('attachments')
-        .delete()
-        .eq('id', attachmentId);
+      const { error: dbError } = await supabase.from('attachments').delete().eq('id', attachmentId);
 
       if (dbError) {
         console.error('Database deletion error:', dbError);
@@ -493,17 +519,17 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
       // Refresh attachments list
       await fetchAttachments();
-      
+
       toast({
-        title: "Success",
-        description: "Attachment deleted successfully.",
+        title: 'Success',
+        description: 'Attachment deleted successfully.',
       });
     } catch (error) {
       console.error('Error deleting attachment:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete attachment. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to delete attachment. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -513,9 +539,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-semibold text-zendesk-secondary">
-              {ticket.title}
-            </h2>
+            <h2 className="text-2xl font-semibold text-zendesk-secondary">{ticket.title}</h2>
             <div className="mt-2 flex items-center space-x-4 text-sm text-zendesk-muted">
               <div className="flex items-center space-x-1">
                 <User className="w-4 h-4" />
@@ -541,7 +565,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         <div>
           <h3 className="font-medium text-zendesk-secondary mb-2">Description</h3>
           <div className="bg-gray-50 rounded-lg p-4">
-            <div 
+            <div
               className="prose max-w-none"
               dangerouslySetInnerHTML={{ __html: ticket.description }}
             />
@@ -569,7 +593,10 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
                     } ${existingFeedback ? 'cursor-default' : 'cursor-pointer'}`}
                     disabled={!!existingFeedback}
                   >
-                    <Star className="w-8 h-8" fill={value <= (rating || 0) ? 'currentColor' : 'none'} />
+                    <Star
+                      className="w-8 h-8"
+                      fill={value <= (rating || 0) ? 'currentColor' : 'none'}
+                    />
                   </button>
                 ))}
               </div>
@@ -581,17 +608,12 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
                 disabled={!!existingFeedback}
               />
               {!existingFeedback && (
-                <Button 
-                  onClick={handleSubmitFeedback}
-                  disabled={rating === null}
-                >
+                <Button onClick={handleSubmitFeedback} disabled={rating === null}>
                   Submit Feedback
                 </Button>
               )}
               {existingFeedback && (
-                <p className="text-sm text-zendesk-muted">
-                  Thank you for your feedback!
-                </p>
+                <p className="text-sm text-zendesk-muted">Thank you for your feedback!</p>
               )}
             </div>
           </div>
@@ -637,8 +659,8 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">Assign Agent</label>
-                  <Select 
-                    value={ticket.assignedTo?.id || undefined} 
+                  <Select
+                    value={ticket.assignedTo?.id || undefined}
                     onValueChange={handleAssignAgent}
                   >
                     <SelectTrigger>
@@ -669,22 +691,15 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           <div className="space-y-4">
             <ScrollArea className="h-[300px] pr-4">
               {comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className="mb-4 last:mb-0"
-                >
+                <div key={comment.id} className="mb-4 last:mb-0">
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="font-medium text-zendesk-secondary">
-                      {comment.user.name}
-                    </span>
+                    <span className="font-medium text-zendesk-secondary">{comment.user.name}</span>
                     <Badge variant="secondary" className="text-xs">
                       {comment.user.role}
                     </Badge>
-                    <span className="text-sm text-zendesk-muted">
-                      {comment.created_at}
-                    </span>
+                    <span className="text-sm text-zendesk-muted">{comment.created_at}</span>
                   </div>
-                  <div 
+                  <div
                     className="bg-gray-50 rounded p-3 prose max-w-none"
                     dangerouslySetInnerHTML={{ __html: comment.content }}
                   />

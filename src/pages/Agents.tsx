@@ -1,21 +1,21 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Star } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import Sidebar from '@/components/Sidebar';
+import Header from '@/components/Header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Star } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import TicketDetails from "@/components/TicketDetails";
-import { Ticket } from "@/types/ticket";
+} from '@/components/ui/accordion';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import TicketDetails from '@/components/TicketDetails';
+import { Ticket } from '@/types/ticket';
 
 interface Agent {
   id: string;
@@ -47,7 +47,9 @@ const Agents = () => {
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) return;
 
         const { data: adminProfile } = await supabase
@@ -58,16 +60,17 @@ const Agents = () => {
 
         if (!adminProfile?.company_id) {
           toast({
-            title: "Error",
-            description: "Could not fetch company information",
-            variant: "destructive",
+            title: 'Error',
+            description: 'Could not fetch company information',
+            variant: 'destructive',
           });
           return;
         }
 
         const { data: agentsData, error: agentsError } = await supabase
           .from('profiles')
-          .select(`
+          .select(
+            `
             id,
             email,
             full_name,
@@ -84,16 +87,17 @@ const Agents = () => {
                 role
               )
             )
-          `)
+          `
+          )
           .eq('role', 'agent')
           .eq('company_id', adminProfile.company_id);
 
         if (agentsError) {
           console.error('Error fetching agents:', agentsError);
           toast({
-            title: "Error",
-            description: "Could not fetch agents",
-            variant: "destructive",
+            title: 'Error',
+            description: 'Could not fetch agents',
+            variant: 'destructive',
           });
           return;
         }
@@ -102,12 +106,14 @@ const Agents = () => {
           (agentsData as Agent[]).map(async (agent) => {
             const { data: feedback, error: feedbackError } = await supabase
               .from('feedback')
-              .select(`
+              .select(
+                `
                 rating,
                 tickets!inner (
                   id
                 )
-              `)
+              `
+              )
               .eq('tickets.assignee_id', agent.id)
               .not('rating', 'is', null);
 
@@ -116,19 +122,20 @@ const Agents = () => {
               return {
                 ...agent,
                 average_rating: null,
-                total_ratings: 0
+                total_ratings: 0,
               };
             }
 
             const totalRatings = feedback.length;
-            const averageRating = totalRatings > 0
-              ? Number((feedback.reduce((sum, f) => sum + f.rating, 0) / totalRatings).toFixed(1))
-              : null;
+            const averageRating =
+              totalRatings > 0
+                ? Number((feedback.reduce((sum, f) => sum + f.rating, 0) / totalRatings).toFixed(1))
+                : null;
 
             return {
               ...agent,
               average_rating: averageRating,
-              total_ratings: totalRatings
+              total_ratings: totalRatings,
             };
           })
         );
@@ -137,9 +144,9 @@ const Agents = () => {
       } catch (error) {
         console.error('Error:', error);
         toast({
-          title: "Error",
-          description: "An error occurred while fetching agents",
-          variant: "destructive",
+          title: 'Error',
+          description: 'An error occurred while fetching agents',
+          variant: 'destructive',
         });
       } finally {
         setLoading(false);
@@ -181,9 +188,7 @@ const Agents = () => {
       <div className="flex-1 flex flex-col">
         <Header />
         <main className="flex-1 p-6 overflow-auto">
-          <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">
-            Agents
-          </h1>
+          <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">Agents</h1>
           {loading ? (
             <p>Loading agents...</p>
           ) : (
@@ -192,23 +197,19 @@ const Agents = () => {
                 <Card key={agent.id}>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <CardTitle className="text-lg">
-                        {agent.full_name || agent.email}
-                      </CardTitle>
+                      <CardTitle className="text-lg">{agent.full_name || agent.email}</CardTitle>
                       {agent.average_rating !== null && (
                         <div className="flex items-center space-x-2">
                           <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                          <span className="font-medium">
-                            {agent.average_rating}
-                          </span>
+                          <span className="font-medium">{agent.average_rating}</span>
                           <span className="text-sm text-gray-500">
                             ({agent.total_ratings} rating{agent.total_ratings !== 1 ? 's' : ''})
                           </span>
                         </div>
                       )}
                     </div>
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className="text-base px-3 py-1 bg-blue-100 text-blue-800"
                     >
                       {agent.tickets.length} Ticket{agent.tickets.length !== 1 ? 's' : ''}
@@ -281,10 +282,7 @@ const Agents = () => {
       <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedTicket && (
-            <TicketDetails
-              ticket={selectedTicket}
-              onClose={() => setSelectedTicket(null)}
-            />
+            <TicketDetails ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
           )}
         </DialogContent>
       </Dialog>

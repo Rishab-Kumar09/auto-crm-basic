@@ -4,8 +4,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { TicketStatus } from "@/types/ticket";
+} from '@/components/ui/select';
+import { TicketStatus } from '@/types/ticket';
 
 interface TicketStatusSelectProps {
   status: TicketStatus;

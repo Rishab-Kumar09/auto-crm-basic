@@ -1,8 +1,8 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Clock, User } from "lucide-react";
-import { Ticket } from "@/types/ticket";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Clock, User } from 'lucide-react';
+import { Ticket } from '@/types/ticket';
+import { cn } from '@/lib/utils';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -12,14 +12,14 @@ interface TicketCardProps {
 const TicketCard = ({ ticket, onClick }: TicketCardProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "open":
-        return "bg-red-100 text-red-800";
-      case "in_progress":
-        return "bg-yellow-100 text-yellow-800";
-      case "closed":
-        return "bg-green-100 text-green-800";
+      case 'open':
+        return 'bg-red-100 text-red-800';
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'closed':
+        return 'bg-green-100 text-green-800';
       default:
-        return "bg-gray-100 text-gray-800";
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -43,9 +43,7 @@ const TicketCard = ({ ticket, onClick }: TicketCardProps) => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge className={cn("text-xs", getStatusColor(ticket.status))}>
-            {ticket.status}
-          </Badge>
+          <Badge className={cn('text-xs', getStatusColor(ticket.status))}>{ticket.status}</Badge>
           {ticket.assignedTo && (
             <Badge variant="outline" className="text-xs">
               Assigned: {ticket.assignedTo.name}

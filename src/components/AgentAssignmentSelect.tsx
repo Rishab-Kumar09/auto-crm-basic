@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
-import { UserPlus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from 'react';
+import { UserPlus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+} from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Agent {
   id: string;
@@ -22,10 +22,10 @@ interface AgentAssignmentSelectProps {
   onAssignmentChange: () => void;
 }
 
-const AgentAssignmentSelect = ({ 
-  ticketId, 
+const AgentAssignmentSelect = ({
+  ticketId,
   currentAssignments,
-  onAssignmentChange 
+  onAssignmentChange,
 }: AgentAssignmentSelectProps) => {
   const { toast } = useToast();
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -36,12 +36,14 @@ const AgentAssignmentSelect = ({
         .from('profiles')
         .select('id, full_name')
         .eq('role', 'agent');
-      
+
       if (agentsData) {
-        setAgents(agentsData.map(agent => ({
-          id: agent.id,
-          name: agent.full_name || 'Unknown Agent'
-        })));
+        setAgents(
+          agentsData.map((agent) => ({
+            id: agent.id,
+            name: agent.full_name || 'Unknown Agent',
+          }))
+        );
       }
     };
 
@@ -58,17 +60,17 @@ const AgentAssignmentSelect = ({
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Agent assigned successfully.",
+        title: 'Success',
+        description: 'Agent assigned successfully.',
       });
 
       onAssignmentChange();
     } catch (error) {
-      console.error("Error assigning agent:", error);
+      console.error('Error assigning agent:', error);
       toast({
-        title: "Error",
-        description: "Failed to assign agent. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to assign agent. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -84,17 +86,17 @@ const AgentAssignmentSelect = ({
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Agent assignment removed successfully.",
+        title: 'Success',
+        description: 'Agent assignment removed successfully.',
       });
 
       onAssignmentChange();
     } catch (error) {
-      console.error("Error removing assignment:", error);
+      console.error('Error removing assignment:', error);
       toast({
-        title: "Error",
-        description: "Failed to remove assignment. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to remove assignment. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -103,11 +105,7 @@ const AgentAssignmentSelect = ({
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {currentAssignments.map((assignment) => (
-          <Badge
-            key={assignment.id}
-            variant="secondary"
-            className="flex items-center gap-2"
-          >
+          <Badge key={assignment.id} variant="secondary" className="flex items-center gap-2">
             {assignment.name}
             <button
               onClick={() => handleRemoveAssignment(assignment.id)}
@@ -118,17 +116,15 @@ const AgentAssignmentSelect = ({
           </Badge>
         ))}
       </div>
-      
-      <Select
-        onValueChange={handleAssignAgent}
-      >
+
+      <Select onValueChange={handleAssignAgent}>
         <SelectTrigger>
           <UserPlus className="w-4 h-4 mr-2" />
           <SelectValue placeholder="Assign agent" />
         </SelectTrigger>
         <SelectContent>
           {agents
-            .filter(agent => !currentAssignments.some(assignment => assignment.id === agent.id))
+            .filter((agent) => !currentAssignments.some((assignment) => assignment.id === agent.id))
             .map((agent) => (
               <SelectItem key={agent.id} value={agent.id}>
                 {agent.name}

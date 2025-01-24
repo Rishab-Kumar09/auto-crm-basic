@@ -1,21 +1,21 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import Sidebar from '@/components/Sidebar';
+import Header from '@/components/Header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import TicketDetails from "@/components/TicketDetails";
-import { Ticket } from "@/types/ticket";
-import { Building, Clock, User } from "lucide-react";
+} from '@/components/ui/accordion';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import TicketDetails from '@/components/TicketDetails';
+import { Ticket } from '@/types/ticket';
+import { Building, Clock, User } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -44,13 +44,16 @@ const Companies = () => {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) return;
 
         // Get all tickets created by the user, grouped by company
         const { data: companiesData, error } = await supabase
           .from('companies')
-          .select(`
+          .select(
+            `
             id,
             name,
             tickets!tickets_company_id_fkey (
@@ -66,36 +69,37 @@ const Companies = () => {
                 role
               )
             )
-          `)
+          `
+          )
           .eq('tickets.customer_id', user.id);
 
         if (error) {
           console.error('Error fetching companies:', error);
           toast({
-            title: "Error",
-            description: "Could not fetch companies",
-            variant: "destructive",
+            title: 'Error',
+            description: 'Could not fetch companies',
+            variant: 'destructive',
           });
           return;
         }
 
         // Filter out companies with no tickets
         const filteredCompanies = companiesData
-          .filter(company => company.tickets.length > 0)
-          .map(company => ({
+          .filter((company) => company.tickets.length > 0)
+          .map((company) => ({
             ...company,
-            tickets: company.tickets.sort((a, b) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            )
+            tickets: company.tickets.sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            ),
           }));
 
         setCompanies(filteredCompanies);
       } catch (error) {
         console.error('Error:', error);
         toast({
-          title: "Error",
-          description: "An error occurred while fetching companies",
-          variant: "destructive",
+          title: 'Error',
+          description: 'An error occurred while fetching companies',
+          variant: 'destructive',
         });
       } finally {
         setLoading(false);
@@ -137,9 +141,7 @@ const Companies = () => {
       <div className="flex-1 flex flex-col">
         <Header />
         <main className="flex-1 p-6 overflow-auto">
-          <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">
-            My Companies
-          </h1>
+          <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">My Companies</h1>
           {loading ? (
             <p>Loading companies...</p>
           ) : (
@@ -151,8 +153,8 @@ const Companies = () => {
                       <Building className="w-5 h-5" />
                       {company.name}
                     </CardTitle>
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className="text-base px-3 py-1 bg-blue-100 text-blue-800"
                     >
                       {company.tickets.length} Ticket{company.tickets.length !== 1 ? 's' : ''}
@@ -189,8 +191,8 @@ const Companies = () => {
                                     <span className="text-sm text-gray-500">
                                       Created: {new Date(ticket.created_at).toLocaleDateString()}
                                     </span>
-                                    <Button 
-                                      variant="outline" 
+                                    <Button
+                                      variant="outline"
                                       size="sm"
                                       onClick={() => setSelectedTicket(ticket as Ticket)}
                                     >
@@ -218,10 +220,7 @@ const Companies = () => {
       <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedTicket && (
-            <TicketDetails
-              ticket={selectedTicket}
-              onClose={() => setSelectedTicket(null)}
-            />
+            <TicketDetails ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
           )}
         </DialogContent>
       </Dialog>
@@ -229,4 +228,4 @@ const Companies = () => {
   );
 };
 
-export default Companies; 
+export default Companies;

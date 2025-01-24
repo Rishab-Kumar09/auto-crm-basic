@@ -22,4 +22,4 @@ jest.mock('@/integrations/supabase/client', () => ({
       })),
     },
   },
-})); 
+}));

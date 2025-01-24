@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Comment } from "@/types/ticket";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Comment } from '@/types/ticket';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TicketCommentsProps {
   ticketId: string;
@@ -14,7 +14,7 @@ interface TicketCommentsProps {
 }
 
 const TicketComments = ({ ticketId, comments, onCommentAdded }: TicketCommentsProps) => {
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -23,24 +23,22 @@ const TicketComments = ({ ticketId, comments, onCommentAdded }: TicketCommentsPr
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
-        .from("comments")
-        .insert({ ticket_id: ticketId, content });
+      const { error } = await supabase.from('comments').insert({ ticket_id: ticketId, content });
 
       if (error) throw error;
 
-      setContent("");
+      setContent('');
       onCommentAdded();
       toast({
-        title: "Success",
-        description: "Comment added successfully",
+        title: 'Success',
+        description: 'Comment added successfully',
       });
     } catch (error) {
-      console.error("Error adding comment:", error);
+      console.error('Error adding comment:', error);
       toast({
-        title: "Error",
-        description: "Failed to add comment. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to add comment. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -77,11 +75,8 @@ const TicketComments = ({ ticketId, comments, onCommentAdded }: TicketCommentsPr
           placeholder="Add a comment..."
           className="min-h-[100px]"
         />
-        <Button 
-          onClick={handleSubmit} 
-          disabled={isSubmitting || !content.trim()}
-        >
-          {isSubmitting ? "Adding..." : "Add Comment"}
+        <Button onClick={handleSubmit} disabled={isSubmitting || !content.trim()}>
+          {isSubmitting ? 'Adding...' : 'Add Comment'}
         </Button>
       </div>
     </div>

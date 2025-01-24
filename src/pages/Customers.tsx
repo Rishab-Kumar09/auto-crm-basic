@@ -1,20 +1,20 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Ticket } from "@/types/ticket";
-import TicketDetails from "@/components/TicketDetails";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import Sidebar from '@/components/Sidebar';
+import Header from '@/components/Header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Ticket } from '@/types/ticket';
+import TicketDetails from '@/components/TicketDetails';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+} from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const Customers = () => {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -25,7 +25,9 @@ const Customers = () => {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
         const { data: userProfile, error: profileError } = await supabase
@@ -42,7 +44,8 @@ const Customers = () => {
 
         let query = supabase
           .from('profiles')
-          .select(`
+          .select(
+            `
             *,
             tickets!customer_id (
               id,
@@ -65,7 +68,8 @@ const Customers = () => {
                 role
               )
             )
-          `)
+          `
+          )
           .eq('role', 'customer')
           .eq('tickets.company_id', userProfile.company_id);
 
@@ -78,17 +82,17 @@ const Customers = () => {
 
         if (ticketError) throw ticketError;
 
-        const validCustomers = ticketCustomers?.filter(customer => 
-          customer.tickets && customer.tickets.length > 0
-        ) || [];
+        const validCustomers =
+          ticketCustomers?.filter((customer) => customer.tickets && customer.tickets.length > 0) ||
+          [];
 
         setCustomers(validCustomers);
       } catch (error) {
         console.error('Error fetching customers:', error);
         toast({
-          title: "Error",
-          description: "Could not fetch customers",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Could not fetch customers',
+          variant: 'destructive',
         });
       } finally {
         setLoading(false);
@@ -130,15 +134,11 @@ const Customers = () => {
       <div className="flex-1 flex flex-col">
         <Header />
         <main className="flex-1 p-6 overflow-auto">
-          <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">
-            Company Customers
-          </h1>
+          <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">Company Customers</h1>
           <div className="grid gap-4">
             {loading ? (
               <Card>
-                <CardContent className="p-6">
-                  Loading customers...
-                </CardContent>
+                <CardContent className="p-6">Loading customers...</CardContent>
               </Card>
             ) : customers.length === 0 ? (
               <Card>
@@ -160,10 +160,15 @@ const Customers = () => {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <p><strong>Email:</strong> {customer.email}</p>
-                        <p><strong>Joined:</strong> {new Date(customer.created_at).toLocaleDateString()}</p>
+                        <p>
+                          <strong>Email:</strong> {customer.email}
+                        </p>
+                        <p>
+                          <strong>Joined:</strong>{' '}
+                          {new Date(customer.created_at).toLocaleDateString()}
+                        </p>
                       </div>
-                      
+
                       <Accordion type="single" collapsible>
                         <AccordionItem value="tickets">
                           <AccordionTrigger className="hover:no-underline">
@@ -172,12 +177,14 @@ const Customers = () => {
                           <AccordionContent>
                             <div className="space-y-3">
                               {customer.tickets.map((ticket: any) => (
-                                <div 
+                                <div
                                   key={ticket.id}
                                   className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:border-gray-300 transition-colors"
                                 >
                                   <div className="flex items-center justify-between">
-                                    <h4 className="font-medium text-lg text-zendesk-secondary">{ticket.title}</h4>
+                                    <h4 className="font-medium text-lg text-zendesk-secondary">
+                                      {ticket.title}
+                                    </h4>
                                     <div className="flex gap-2">
                                       <Badge className={getStatusColor(ticket.status)}>
                                         {ticket.status.replace('_', ' ')}
@@ -193,8 +200,8 @@ const Customers = () => {
                                     <span className="text-sm text-gray-500">
                                       Created: {new Date(ticket.created_at).toLocaleDateString()}
                                     </span>
-                                    <Button 
-                                      variant="outline" 
+                                    <Button
+                                      variant="outline"
                                       size="sm"
                                       onClick={() => setSelectedTicket(ticket)}
                                     >
@@ -219,10 +226,7 @@ const Customers = () => {
       <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedTicket && (
-            <TicketDetails
-              ticket={selectedTicket}
-              onClose={() => setSelectedTicket(null)}
-            />
+            <TicketDetails ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
           )}
         </DialogContent>
       </Dialog>
