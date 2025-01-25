@@ -38,18 +38,33 @@ const CustomerRatings = () => {
         .eq('id', user.id)
         .maybeSingle();
 
-      // Fetch all feedback for tickets in the company
+      if (!profile?.company_id) {
+        return {
+          averageRating: 0,
+          totalRatings: 0,
+          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        };
+      }
+
+      // First get all tickets from the admin's company
+      const { data: companyTickets } = await supabase
+        .from('tickets')
+        .select('id')
+        .eq('company_id', profile.company_id);
+
+      if (!companyTickets?.length) {
+        return {
+          averageRating: 0,
+          totalRatings: 0,
+          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        };
+      }
+
+      // Then fetch feedback only for those tickets
       const { data: feedback, error } = await supabase
         .from('feedback')
-        .select(
-          `
-          rating,
-          tickets (
-            company_id
-          )
-        `
-        )
-        .eq('tickets.company_id', profile?.company_id);
+        .select('rating')
+        .in('ticket_id', companyTickets.map(t => t.id));
 
       if (error) {
         console.error('Error fetching feedback:', error);

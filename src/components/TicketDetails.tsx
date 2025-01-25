@@ -407,17 +407,6 @@ const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetai
 
       // Notify parent component about the update
       onUpdate?.();
-
-      // Auto refresh page when ticket is closed
-      if (newStatus === 'closed') {
-        toast({
-          title: 'Info',
-          description: 'Page will refresh in 2 seconds...',
-        });
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      }
     } catch (error) {
       console.error('Error updating ticket status:', error);
       toast({
