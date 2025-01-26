@@ -290,7 +290,7 @@ const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetai
       } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      // Add comment
+      // Create the comment first
       const { data: comment, error: commentError } = await supabase
         .from('comments')
         .insert({
@@ -301,63 +301,77 @@ const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetai
         .select()
         .single();
 
-      if (commentError) throw commentError;
-
-      console.log('Created comment:', comment);
-
-      // Upload and attach files if any
-      if (pendingFiles.length > 0) {
-        console.log(
-          'Uploading files:',
-          pendingFiles.map((f) => f.name)
-        );
-        const uploadedFiles = [];
-
-        for (const file of pendingFiles) {
-          const fileExt = file.name.split('.').pop();
-          const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-          console.log('Uploading file to path:', filePath);
-
-          const { error: uploadError } = await supabase.storage
-            .from('attachments')
-            .upload(filePath, file);
-
-          if (uploadError) {
-            console.error('Error uploading file:', uploadError);
-            throw uploadError;
-          }
-
-          uploadedFiles.push({
-            file_name: file.name,
-            file_type: file.type,
-            file_size: file.size,
-            file_path: filePath,
-          });
-        }
-
-        console.log('Files uploaded successfully:', uploadedFiles);
-
-        // Add attachments to database
-        const { data: attachments, error: attachmentError } = await supabase
-          .from('attachments')
-          .insert(
-            uploadedFiles.map((file) => ({
-              ...file,
-              comment_id: comment.id,
-              uploaded_by: user.id,
-            }))
-          )
-          .select();
-
-        if (attachmentError) {
-          console.error('Error saving attachments:', attachmentError);
-          throw attachmentError;
-        }
-
-        console.log('Attachments saved to database:', attachments);
+      if (commentError) {
+        console.error('Error creating comment:', commentError);
+        throw commentError;
       }
 
+      // Then handle file uploads if any
+      if (pendingFiles.length > 0) {
+        const uploadPromises = pendingFiles.map(async (file) => {
+          try {
+            // Sanitize filename and create unique path
+            const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const timestamp = new Date().getTime();
+            const randomId = Math.random().toString(36).substring(2, 15);
+            const filePath = `${ticket.id}/${comment.id}/${timestamp}-${randomId}-${safeFileName}`;
+
+            // Upload file
+            const { error: uploadError, data: uploadData } = await supabase.storage
+              .from('attachments')
+              .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+              });
+
+            if (uploadError) {
+              console.error('File upload error:', uploadError);
+              throw uploadError;
+            }
+
+            // Return attachment record data
+            return {
+              file_name: file.name,
+              file_type: file.type,
+              file_size: file.size,
+              file_path: filePath,
+              uploaded_by: user.id,
+              comment_id: comment.id
+            };
+          } catch (error) {
+            console.error('Error processing file:', file.name, error);
+            throw error;
+          }
+        });
+
+        try {
+          const uploadedFiles = await Promise.all(uploadPromises);
+          
+          // Create attachment records
+          const { error: attachmentError } = await supabase
+            .from('attachments')
+            .insert(uploadedFiles);
+
+          if (attachmentError) {
+            console.error('Error creating attachment records:', attachmentError);
+            // Clean up uploaded files and comment
+            await Promise.all(uploadedFiles.map(file => 
+              supabase.storage.from('attachments').remove([file.file_path])
+            ));
+            await supabase.from('comments').delete().eq('id', comment.id);
+            throw attachmentError;
+          }
+        } catch (error) {
+          // Clean up the comment if file upload failed
+          await supabase.from('comments').delete().eq('id', comment.id);
+          throw error;
+        }
+      }
+
+      // Clear form and show success message
+      setNewComment('');
+      setPendingFiles([]);
+      
       // Fetch updated comments and attachments
       const newComments = await fetchComments();
       if (newComments) {
@@ -365,14 +379,12 @@ const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetai
         await fetchAttachments(newComments);
       }
 
-      setNewComment('');
-      setPendingFiles([]);
       toast({
         title: 'Success',
         description: 'Comment added successfully.',
       });
     } catch (error) {
-      console.error('Error adding comment:', error);
+      console.error('Error in handleAddComment:', error);
       toast({
         title: 'Error',
         description: 'Failed to add comment. Please try again.',
