@@ -32,18 +32,51 @@ const AgentAssignmentSelect = ({
 
   useEffect(() => {
     const fetchAgents = async () => {
-      const { data: agentsData } = await supabase
+      // First get the current user's company_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('No user found');
+        return;
+      }
+      console.log('Current user:', user.id);
+
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name')
-        .eq('role', 'agent');
+        .select('company_id, role')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        return;
+      }
+      
+      if (!userProfile?.company_id) {
+        console.log('No company_id found for user:', userProfile);
+        return;
+      }
+      console.log('User profile:', userProfile);
+
+      // Then fetch agents from the same company
+      const { data: agentsData, error: agentsError } = await supabase
+        .from('profiles')
+        .select('id, full_name, role, company_id')
+        .eq('role', 'agent')
+        .eq('company_id', userProfile.company_id);
+
+      if (agentsError) {
+        console.error('Error fetching agents:', agentsError);
+        return;
+      }
+      console.log('Found agents:', agentsData);
 
       if (agentsData) {
-        setAgents(
-          agentsData.map((agent) => ({
-            id: agent.id,
-            name: agent.full_name || 'Unknown Agent',
-          }))
-        );
+        const mappedAgents = agentsData.map((agent) => ({
+          id: agent.id,
+          name: agent.full_name || 'Unknown Agent',
+        }));
+        console.log('Mapped agents:', mappedAgents);
+        setAgents(mappedAgents);
       }
     };
 
@@ -54,7 +87,7 @@ const AgentAssignmentSelect = ({
     try {
       const { error } = await supabase
         .from('tickets')
-        .update({ assignee_id: agentId })
+        .update({ assigned_to: agentId })
         .eq('id', ticketId);
 
       if (error) throw error;
@@ -79,9 +112,9 @@ const AgentAssignmentSelect = ({
     try {
       const { error } = await supabase
         .from('tickets')
-        .update({ assignee_id: null })
+        .update({ assigned_to: null })
         .eq('id', ticketId)
-        .eq('assignee_id', agentId);
+        .eq('assigned_to', agentId);
 
       if (error) throw error;
 
@@ -100,6 +133,13 @@ const AgentAssignmentSelect = ({
       });
     }
   };
+
+  console.log('Current assignments:', currentAssignments);
+  console.log('Available agents:', agents);
+  const availableAgents = agents.filter(
+    (agent) => !currentAssignments.some((assignment) => assignment.id === agent.id)
+  );
+  console.log('Filtered available agents:', availableAgents);
 
   return (
     <div className="space-y-4">
@@ -123,13 +163,11 @@ const AgentAssignmentSelect = ({
           <SelectValue placeholder="Assign agent" />
         </SelectTrigger>
         <SelectContent>
-          {agents
-            .filter((agent) => !currentAssignments.some((assignment) => assignment.id === agent.id))
-            .map((agent) => (
-              <SelectItem key={agent.id} value={agent.id}>
-                {agent.name}
-              </SelectItem>
-            ))}
+          {availableAgents.map((agent) => (
+            <SelectItem key={agent.id} value={agent.id}>
+              {agent.name}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>

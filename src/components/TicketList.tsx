@@ -48,30 +48,33 @@ const TicketList = () => {
       }
 
       const query = supabase.from('tickets').select(`
-          *,
-          customer:profiles!tickets_customer_id_fkey (
-            id,
-            full_name,
-            email,
-            role
-          ),
-          assignedTo:profiles!tickets_assignee_id_fkey (
-            id,
-            full_name,
-            email,
-            role
-          ),
-          company:companies (
-            id,
-            name
-          )
-        `).order('created_at', { ascending: false });
+        id,
+        title,
+        description,
+        status,
+        priority,
+        company_id,
+        assigned_to,
+        customer_id,
+        created_at,
+        updated_at,
+        company:companies (
+          id,
+          name
+        )
+      `).order('created_at', { ascending: false });
 
       // For agents, only fetch assigned tickets
       if (profile?.role === 'agent') {
-        query.eq('assignee_id', user.id);
-      } else if (profile?.role === 'admin' && profile?.company_id) {
-        // For admins, only fetch tickets from their company
+        query.eq('assigned_to', user.id);
+      } else if (profile?.role === 'admin') {
+        // For admins, fetch tickets from their company
+        if (!profile.company_id) {
+          console.warn('Admin has no company_id assigned');
+          setTickets([]);
+          setLoading(false);
+          return;
+        }
         query.eq('company_id', profile.company_id);
       } else if (profile?.role === 'customer') {
         // For customers, only fetch their own tickets
@@ -80,41 +83,67 @@ const TicketList = () => {
 
       const { data: ticketsData, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching tickets:', error);
+        throw error;
+      }
 
-      const formattedTickets = ticketsData.map((ticket: any) => ({
-        id: ticket.id,
-        title: ticket.title,
-        description: ticket.description,
-        status: ticket.status as TicketStatus,
-        priority: ticket.priority,
-        customer: {
-          id: ticket.customer.id,
-          name: ticket.customer.full_name,
-          email: ticket.customer.email,
-          role: ticket.customer.role as UserRole,
-        },
-        ...(ticket.assignedTo && {
-          assignedTo: {
-            id: ticket.assignedTo.id,
-            name: ticket.assignedTo.full_name,
-            email: ticket.assignedTo.email,
-            role: ticket.assignedTo.role as UserRole,
+      if (!ticketsData) {
+        setTickets([]);
+        return;
+      }
+
+      // After getting tickets, fetch customer and assignee details
+      const customerIds = ticketsData.map(t => t.customer_id).filter(Boolean);
+      const assigneeIds = ticketsData.map(t => t.assigned_to).filter(Boolean);
+      const uniqueUserIds = [...new Set([...customerIds, ...assigneeIds])];
+
+      const { data: usersData } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .in('id', uniqueUserIds);
+
+      const usersMap = (usersData || []).reduce((acc, user) => {
+        acc[user.id] = user;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const formattedTickets = ticketsData
+        .filter(ticket => ticket && ticket.id) // Filter out any null tickets
+        .map((ticket: any) => ({
+          id: ticket.id,
+          title: ticket.title || '',
+          description: ticket.description || '',
+          status: ticket.status as TicketStatus,
+          priority: ticket.priority || 'medium',
+          customer: usersMap[ticket.customer_id] ? {
+            id: ticket.customer_id,
+            name: usersMap[ticket.customer_id].full_name || 'Unknown User',
+            email: usersMap[ticket.customer_id].email || '',
+            role: usersMap[ticket.customer_id].role || 'customer'
+          } : {
+            id: ticket.customer_id,
+            name: 'Unknown User',
+            email: '',
+            role: 'customer'
           },
-        }),
-        ...(ticket.company && {
-          company: {
+          assignedTo: ticket.assigned_to && usersMap[ticket.assigned_to] ? {
+            id: ticket.assigned_to,
+            name: usersMap[ticket.assigned_to].full_name || 'Unknown Agent',
+            email: usersMap[ticket.assigned_to].email || '',
+            role: usersMap[ticket.assigned_to].role || 'agent'
+          } : null,
+          company: ticket.company ? {
             id: ticket.company.id,
-            name: ticket.company.name,
-          },
-        }),
-        created_at: new Date(ticket.created_at).toLocaleString(),
-        updated_at: new Date(ticket.updated_at).toLocaleString(),
-      }));
+            name: ticket.company.name || 'Unknown Company'
+          } : null,
+          created_at: ticket.created_at ? new Date(ticket.created_at).toLocaleString() : new Date().toLocaleString(),
+          updated_at: ticket.updated_at ? new Date(ticket.updated_at).toLocaleString() : new Date().toLocaleString(),
+        }));
 
       setTickets(formattedTickets);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching tickets:', error);
       toast({
         title: 'Error',
         description: 'Failed to load tickets. Please try again.',

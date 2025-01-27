@@ -41,7 +41,7 @@ const Dashboard = () => {
         const { data: tickets, error } = await supabase
           .from('tickets')
           .select('status')
-          .eq('assignee_id', user.id);
+          .eq('assigned_to', user.id);
 
         if (error) {
           console.error('Error fetching tickets:', error);

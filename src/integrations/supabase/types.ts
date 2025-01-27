@@ -386,7 +386,7 @@ export type Database = {
       };
       tickets: {
         Row: {
-          assignee_id: string | null;
+          assigned_to: string | null;
           company_id: string | null;
           created_at: string | null;
           customer_id: string;
@@ -398,7 +398,7 @@ export type Database = {
           updated_at: string | null;
         };
         Insert: {
-          assignee_id?: string | null;
+          assigned_to?: string | null;
           company_id?: string | null;
           created_at?: string | null;
           customer_id: string;
@@ -410,7 +410,7 @@ export type Database = {
           updated_at?: string | null;
         };
         Update: {
-          assignee_id?: string | null;
+          assigned_to?: string | null;
           company_id?: string | null;
           created_at?: string | null;
           customer_id?: string;
@@ -423,8 +423,8 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: 'tickets_assignee_id_fkey';
-            columns: ['assignee_id'];
+            foreignKeyName: 'tickets_assigned_to_fkey';
+            columns: ['assigned_to'];
             isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
@@ -447,7 +447,32 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      ticket_ratings: {
+        Row: {
+          company_id: string;
+          assigned_to: string;
+          agent_name: string | null;
+          agent_email: string;
+          total_ratings: number;
+          average_rating: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ticket_ratings_assigned_to_fkey";
+            columns: ["assigned_to"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ticket_ratings_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          }
+        ]
+      }
     };
     Functions: {
       update_metrics: {

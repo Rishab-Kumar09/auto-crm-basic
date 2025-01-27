@@ -60,6 +60,7 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
           email,
           full_name: fullName,
           role,
+          company_id: role === 'agent' ? selectedCompanyId : null
         },
       ]);
 
@@ -90,16 +91,6 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
         }
       } else if (role === 'agent' && !selectedCompanyId) {
         throw new Error('Please select a company');
-      } else if (role === 'agent') {
-        // Update profile with selected company for agent
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ company_id: selectedCompanyId })
-          .eq('id', authData.user.id);
-
-        if (updateError) {
-          throw new Error('Failed to update profile with company');
-        }
       }
 
       onSuccess();

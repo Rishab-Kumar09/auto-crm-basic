@@ -61,9 +61,9 @@ const Customers = () => {
                 email,
                 role
               ),
-              assignedTo:profiles!tickets_assignee_id_fkey (
+              assignedTo:profiles!tickets_assigned_to_fkey (
                 id,
-                name:full_name,
+                full_name,
                 email,
                 role
               )
@@ -75,7 +75,7 @@ const Customers = () => {
 
         // If user is an agent, only show tickets assigned to them
         if (userProfile.role === 'agent') {
-          query = query.eq('tickets.assignee_id', user.id);
+          query = query.eq('tickets.assigned_to', user.id);
         }
 
         const { data: ticketCustomers, error: ticketError } = await query;

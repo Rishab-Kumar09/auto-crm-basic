@@ -1,12 +1,3 @@
--- Create the set_updated_at function if it doesn't exist
-CREATE OR REPLACE FUNCTION public.set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = timezone('utc'::text, now());
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 -- Create a storage bucket for attachments
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('attachments', 'attachments', true);
@@ -30,7 +21,7 @@ ON storage.objects FOR DELETE TO authenticated USING (
   (
     (storage.foldername(name))[1] = auth.uid()::text
     OR
-    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
+    (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'agent')
   )
 );
 
@@ -55,37 +46,30 @@ CREATE TABLE public.attachments (
 -- Add RLS policies
 ALTER TABLE public.attachments ENABLE ROW LEVEL SECURITY;
 
--- Policy to allow users to view attachments based on their role and ticket access
+-- Policy to allow users to view attachments
 CREATE POLICY "Users can view attachments" ON public.attachments
   FOR SELECT USING (
     -- Admin and agents can see all attachments
     (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'agent')
     OR
-    -- For customers:
-    (
-      -- Check if user is a customer
-      (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'customer'
-      AND
-      (
-        -- For ticket attachments: check if they own the ticket
-        (
-          attachments.ticket_id IS NOT NULL
-          AND EXISTS (
-            SELECT 1 FROM public.tickets t
-            WHERE t.id = attachments.ticket_id
-            AND t.customer_id = auth.uid()
-          )
-        )
+    -- For other users, they can see attachments on tickets they have access to
+    EXISTS (
+      SELECT 1 FROM public.tickets t
+      WHERE (
+        t.id = attachments.ticket_id
         OR
-        -- For comment attachments: check if they own the ticket the comment belongs to
-        (
-          attachments.comment_id IS NOT NULL
-          AND EXISTS (
-            SELECT 1 FROM public.comments c
-            JOIN public.tickets t ON t.id = c.ticket_id
-            WHERE c.id = attachments.comment_id
-            AND t.customer_id = auth.uid()
-          )
+        EXISTS (
+          SELECT 1 FROM public.comments c
+          WHERE c.id = attachments.comment_id
+          AND c.ticket_id = t.id
+        )
+      )
+      AND (
+        t.created_by = auth.uid()
+        OR t.assigned_to = auth.uid()
+        OR t.company_id IN (
+          SELECT company_id FROM public.profiles
+          WHERE id = auth.uid()
         )
       )
     )
@@ -97,8 +81,7 @@ CREATE POLICY "Users can upload attachments" ON public.attachments
     uploaded_by = auth.uid()
   );
 
--- Policy to allow users to delete attachments (updated to include admin)
-DROP POLICY IF EXISTS "Users can delete their own attachments" ON public.attachments;
+-- Policy to allow users to delete attachments
 CREATE POLICY "Users can delete attachments" ON public.attachments
   FOR DELETE TO authenticated USING (
     uploaded_by = auth.uid()
@@ -106,8 +89,8 @@ CREATE POLICY "Users can delete attachments" ON public.attachments
     (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
   );
 
--- Create trigger to update updated_at
-CREATE TRIGGER set_updated_at
+-- Create trigger for updated_at
+CREATE TRIGGER handle_attachments_updated_at
   BEFORE UPDATE ON public.attachments
   FOR EACH ROW
-  EXECUTE FUNCTION public.set_updated_at(); 
+  EXECUTE PROCEDURE public.handle_updated_at(); 

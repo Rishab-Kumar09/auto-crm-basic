@@ -46,28 +46,14 @@ const CustomerRatings = () => {
         };
       }
 
-      // First get all tickets from the admin's company
-      const { data: companyTickets } = await supabase
-        .from('tickets')
-        .select('id')
+      // Get company-wide ratings from the materialized view
+      const { data: companyRatings, error: ratingsError } = await supabase
+        .from('ticket_ratings')
+        .select('average_rating, total_ratings')
         .eq('company_id', profile.company_id);
 
-      if (!companyTickets?.length) {
-        return {
-          averageRating: 0,
-          totalRatings: 0,
-          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        };
-      }
-
-      // Then fetch feedback only for those tickets
-      const { data: feedback, error } = await supabase
-        .from('feedback')
-        .select('rating')
-        .in('ticket_id', companyTickets.map(t => t.id));
-
-      if (error) {
-        console.error('Error fetching feedback:', error);
+      if (ratingsError) {
+        console.error('Error fetching ratings:', ratingsError);
         toast({
           title: 'Error',
           description: 'Failed to load customer ratings',
@@ -80,14 +66,29 @@ const CustomerRatings = () => {
         };
       }
 
-      // Calculate average rating and distribution
-      const validFeedback = feedback.filter((f) => f.rating !== null);
-      const totalRatings = validFeedback.length;
-      const averageRating =
-        totalRatings > 0 ? validFeedback.reduce((sum, f) => sum + f.rating, 0) / totalRatings : 0;
+      // Calculate company-wide average
+      const totalRatings = companyRatings.reduce((sum, r) => sum + r.total_ratings, 0);
+      const weightedSum = companyRatings.reduce((sum, r) => sum + (r.average_rating * r.total_ratings), 0);
+      const averageRating = totalRatings > 0 ? Number((weightedSum / totalRatings).toFixed(1)) : 0;
+
+      // Get rating distribution
+      const { data: feedback, error: feedbackError } = await supabase
+        .from('feedback')
+        .select('rating, tickets!inner(company_id)')
+        .eq('tickets.company_id', profile.company_id)
+        .not('rating', 'is', null);
+
+      if (feedbackError) {
+        console.error('Error fetching feedback distribution:', feedbackError);
+        return {
+          averageRating,
+          totalRatings,
+          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        };
+      }
 
       // Calculate rating distribution
-      const distribution = validFeedback.reduce(
+      const distribution = feedback.reduce(
         (acc, f) => {
           acc[f.rating as keyof RatingDistribution]++;
           return acc;
@@ -96,7 +97,7 @@ const CustomerRatings = () => {
       );
 
       return {
-        averageRating: Number(averageRating.toFixed(1)),
+        averageRating,
         totalRatings,
         distribution,
       };

@@ -46,6 +46,7 @@ const TicketForm = ({ onSuccess, onCancel }: TicketFormProps) => {
           title,
           description,
           customer_id: user.id,
+          created_by: user.id,
           company_id: selectedCompanyId,
           status: 'open',
           priority: 'low',

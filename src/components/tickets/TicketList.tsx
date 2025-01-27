@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Ticket } from '@/types/ticket';
+import { Ticket, UserRole } from '@/types/ticket';
 import TicketCard from './TicketCard';
 import TicketDetails from './TicketDetails';
 
@@ -9,53 +9,94 @@ const TicketList = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [userRole, setUserRole] = useState<UserRole>('customer');
   const { toast } = useToast();
 
   const fetchTickets = async () => {
     try {
-      const { data, error } = await supabase
+      // First get the current user and their profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile) throw new Error('No profile found');
+      setUserRole(profile.role as UserRole);
+
+      // Build the base query
+      let query = supabase
         .from('tickets')
-        .select(
-          `
+        .select(`
           *,
-          customer:profiles!tickets_customer_id_fkey (
+          company:companies (
             id,
-            full_name,
-            email,
-            role
-          ),
-          assignedTo:profiles!tickets_assignee_id_fkey (
-            id,
-            full_name,
-            email,
-            role
+            name
           )
-        `
-        )
+        `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      // Apply role-specific filters
+      if (profile.role === 'agent') {
+        query = query.eq('assigned_to', user.id);
+      } else if (profile.role === 'admin' && profile.company_id) {
+        query = query.eq('company_id', profile.company_id);
+      } else if (profile.role === 'customer') {
+        query = query.eq('customer_id', user.id);
+      }
 
-      const formattedTickets = data.map((ticket) => ({
+      const { data: ticketsData, error: ticketsError } = await query;
+
+      if (ticketsError) throw ticketsError;
+
+      // Get all unique user IDs (customers and assigned agents)
+      const userIds = new Set([
+        ...ticketsData.map(t => t.customer_id),
+        ...ticketsData.filter(t => t.assigned_to).map(t => t.assigned_to)
+      ]);
+
+      // Fetch all relevant user profiles in one query
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .in('id', Array.from(userIds));
+
+      // Create a map of user profiles
+      const profilesMap = (profilesData || []).reduce((acc, profile) => {
+        acc[profile.id] = profile;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const formattedTickets = ticketsData.map((ticket) => ({
         id: ticket.id,
         title: ticket.title,
         description: ticket.description,
         status: ticket.status,
         priority: ticket.priority,
-        customer: {
-          id: ticket.customer.id,
-          name: ticket.customer.full_name || 'Unknown User',
-          email: ticket.customer.email,
-          role: ticket.customer.role,
+        customer: profilesMap[ticket.customer_id] ? {
+          id: ticket.customer_id,
+          name: profilesMap[ticket.customer_id].full_name || 'Unknown User',
+          email: profilesMap[ticket.customer_id].email,
+          role: profilesMap[ticket.customer_id].role as UserRole,
+        } : {
+          id: ticket.customer_id,
+          name: 'Unknown User',
+          email: '',
+          role: 'customer' as UserRole,
         },
-        ...(ticket.assignedTo && {
-          assignedTo: {
-            id: ticket.assignedTo.id,
-            name: ticket.assignedTo.full_name || 'Unknown Agent',
-            email: ticket.assignedTo.email,
-            role: ticket.assignedTo.role,
-          },
-        }),
+        assignedTo: ticket.assigned_to && profilesMap[ticket.assigned_to] ? {
+          id: ticket.assigned_to,
+          name: profilesMap[ticket.assigned_to].full_name || 'Unknown Agent',
+          email: profilesMap[ticket.assigned_to].email,
+          role: profilesMap[ticket.assigned_to].role as UserRole,
+        } : null,
+        company: ticket.company ? {
+          id: ticket.company.id,
+          name: ticket.company.name
+        } : null,
         created_at: ticket.created_at,
         updated_at: ticket.updated_at,
       }));
@@ -106,7 +147,11 @@ const TicketList = () => {
         ))
       ) : (
         <div className="text-center p-8">
-          <p className="text-gray-500">No tickets found.</p>
+          <p className="text-gray-500">
+            {userRole === 'agent' 
+              ? 'No tickets have been assigned to you yet.'
+              : 'No tickets found.'}
+          </p>
         </div>
       )}
     </div>

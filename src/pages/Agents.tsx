@@ -74,7 +74,7 @@ const Agents = () => {
             id,
             email,
             full_name,
-            tickets!tickets_assignee_id_fkey (
+            tickets!tickets_assigned_to_fkey (
               id,
               title,
               status,
@@ -102,49 +102,41 @@ const Agents = () => {
           return;
         }
 
-        const agentsWithRatings = await Promise.all(
-          (agentsData as Agent[]).map(async (agent) => {
-            const { data: feedback, error: feedbackError } = await supabase
-              .from('feedback')
-              .select(
-                `
-                rating,
-                tickets!inner (
-                  id
-                )
-              `
-              )
-              .eq('tickets.assignee_id', agent.id)
-              .not('rating', 'is', null);
+        // Get ratings from the materialized view
+        const { data: ratingsData, error: ratingsError } = await supabase
+          .from('ticket_ratings')
+          .select('assigned_to, total_ratings, average_rating')
+          .eq('company_id', adminProfile.company_id);
 
-            if (feedbackError) {
-              console.error('Error fetching feedback:', feedbackError);
-              return {
-                ...agent,
-                tickets: [...agent.tickets].sort(
-                  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                ),
-                average_rating: null,
-                total_ratings: 0,
-              };
-            }
+        if (ratingsError) {
+          console.error('Error fetching ratings:', ratingsError);
+          toast({
+            title: 'Error',
+            description: 'Could not fetch agent ratings',
+            variant: 'destructive',
+          });
+          return;
+        }
 
-            const totalRatings = feedback.length;
-            const averageRating =
-              totalRatings > 0
-                ? Number((feedback.reduce((sum, f) => sum + f.rating, 0) / totalRatings).toFixed(1))
-                : null;
-
-            return {
-              ...agent,
-              tickets: [...agent.tickets].sort(
-                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-              ),
-              average_rating: averageRating,
-              total_ratings: totalRatings,
-            };
-          })
+        // Create a map of agent ratings
+        const ratingsMap = new Map(
+          ratingsData.map(r => [r.assigned_to, { 
+            total_ratings: r.total_ratings, 
+            average_rating: r.average_rating 
+          }])
         );
+
+        const agentsWithRatings = (agentsData as Agent[]).map(agent => {
+          const ratings = ratingsMap.get(agent.id) || { total_ratings: 0, average_rating: null };
+          return {
+            ...agent,
+            tickets: [...agent.tickets].sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            ),
+            average_rating: ratings.average_rating,
+            total_ratings: ratings.total_ratings,
+          };
+        });
 
         setAgents(agentsWithRatings);
       } catch (error) {

@@ -476,7 +476,7 @@ const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetai
       const { error: ticketError } = await supabase
         .from('tickets')
         .update({
-          assignee_id: agentId,
+          assigned_to: agentId,
           updated_at: new Date().toISOString(),
         })
         .filter('id', 'eq', ticket.id);
