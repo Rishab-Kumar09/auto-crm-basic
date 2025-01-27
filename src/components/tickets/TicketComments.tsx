@@ -23,7 +23,19 @@ const TicketComments = ({ ticketId, comments, onCommentAdded }: TicketCommentsPr
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('comments').insert({ ticket_id: ticketId, content });
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
+
+      const { error } = await supabase
+        .from('comments')
+        .insert({ 
+          ticket_id: ticketId, 
+          content,
+          user_id: user.id 
+        });
 
       if (error) throw error;
 
