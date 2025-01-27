@@ -46,10 +46,18 @@ const CustomerRatings = () => {
         };
       }
 
-      // Get company-wide ratings from the materialized view
+      // Get company-wide ratings and distribution from the materialized view
       const { data: companyRatings, error: ratingsError } = await supabase
         .from('ticket_ratings')
-        .select('average_rating, total_ratings')
+        .select(`
+          average_rating,
+          total_ratings,
+          rating_1_count,
+          rating_2_count,
+          rating_3_count,
+          rating_4_count,
+          rating_5_count
+        `)
         .eq('company_id', profile.company_id);
 
       if (ratingsError) {
@@ -66,35 +74,19 @@ const CustomerRatings = () => {
         };
       }
 
-      // Calculate company-wide average
+      // Calculate company-wide totals
       const totalRatings = companyRatings.reduce((sum, r) => sum + r.total_ratings, 0);
       const weightedSum = companyRatings.reduce((sum, r) => sum + (r.average_rating * r.total_ratings), 0);
       const averageRating = totalRatings > 0 ? Number((weightedSum / totalRatings).toFixed(1)) : 0;
 
-      // Get rating distribution
-      const { data: feedback, error: feedbackError } = await supabase
-        .from('feedback')
-        .select('rating, tickets!inner(company_id)')
-        .eq('tickets.company_id', profile.company_id)
-        .not('rating', 'is', null);
-
-      if (feedbackError) {
-        console.error('Error fetching feedback distribution:', feedbackError);
-        return {
-          averageRating,
-          totalRatings,
-          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        };
-      }
-
-      // Calculate rating distribution
-      const distribution = feedback.reduce(
-        (acc, f) => {
-          acc[f.rating as keyof RatingDistribution]++;
-          return acc;
-        },
-        { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as RatingDistribution
-      );
+      // Sum up the distribution counts
+      const distribution = {
+        1: companyRatings.reduce((sum, r) => sum + r.rating_1_count, 0),
+        2: companyRatings.reduce((sum, r) => sum + r.rating_2_count, 0),
+        3: companyRatings.reduce((sum, r) => sum + r.rating_3_count, 0),
+        4: companyRatings.reduce((sum, r) => sum + r.rating_4_count, 0),
+        5: companyRatings.reduce((sum, r) => sum + r.rating_5_count, 0),
+      };
 
       return {
         averageRating,

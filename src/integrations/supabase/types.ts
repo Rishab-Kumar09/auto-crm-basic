@@ -455,6 +455,11 @@ export type Database = {
           agent_email: string;
           total_ratings: number;
           average_rating: number;
+          rating_1_count: number;
+          rating_2_count: number;
+          rating_3_count: number;
+          rating_4_count: number;
+          rating_5_count: number;
         };
         Relationships: [
           {
