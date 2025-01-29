@@ -3,19 +3,39 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Comment } from '@/types/ticket';
-import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { generateResponse } from '@/lib/ai-service';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+
+interface TicketComment {
+  id: string;
+  content: string;
+  user: {
+    id: string;
+    name: string;
+    role: string;
+  };
+  created_at: string;
+  ai_generated?: boolean;
+  ai_metadata?: {
+    confidence: number;
+    model?: string;
+    created?: number;
+    [key: string]: any;
+  };
+}
 
 interface TicketCommentsProps {
   ticketId: string;
-  comments: Comment[];
+  comments: TicketComment[];
   onCommentAdded: () => void;
 }
 
 const TicketComments = ({ ticketId, comments, onCommentAdded }: TicketCommentsProps) => {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async () => {
@@ -23,28 +43,30 @@ const TicketComments = ({ ticketId, comments, onCommentAdded }: TicketCommentsPr
 
     setIsSubmitting(true);
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
-        throw new Error('No authenticated user found');
+        toast({
+          title: 'Error',
+          description: 'You must be logged in to add comments',
+          variant: 'destructive',
+        });
+        return;
       }
 
-      const { error } = await supabase
-        .from('comments')
-        .insert({ 
-          ticket_id: ticketId, 
-          content,
-          user_id: user.id 
-        });
+      const { error } = await supabase.from('comments').insert({
+        content: content.trim(),
+        ticket_id: ticketId,
+        user_id: user.id,
+        ai_generated: false,
+      });
 
       if (error) throw error;
 
       setContent('');
       onCommentAdded();
-      toast({
-        title: 'Success',
-        description: 'Comment added successfully',
-      });
     } catch (error) {
       console.error('Error adding comment:', error);
       toast({
@@ -54,6 +76,59 @@ const TicketComments = ({ ticketId, comments, onCommentAdded }: TicketCommentsPr
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAIResponse = async () => {
+    setIsGeneratingAI(true);
+    try {
+      const ticketResponse = await supabase
+        .from('tickets')
+        .select('title, description')
+        .eq('id', ticketId)
+        .single();
+
+      if (ticketResponse.error) throw ticketResponse.error;
+
+      const previousComments = comments.map(c => c.content);
+      const aiResponse = await generateResponse(
+        `${ticketResponse.data.title}\n${ticketResponse.data.description}`,
+        previousComments
+      );
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) throw new Error('No user found');
+
+      const { error } = await supabase.from('comments').insert({
+        content: aiResponse.content,
+        ticket_id: ticketId,
+        user_id: user.id,
+        ai_generated: true,
+        ai_metadata: {
+          confidence: aiResponse.confidence,
+          ...aiResponse.metadata
+        }
+      });
+
+      if (error) throw error;
+
+      onCommentAdded();
+      toast({
+        title: 'AI Response Generated',
+        description: 'The AI has suggested a response.',
+      });
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate AI response. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -69,12 +144,25 @@ const TicketComments = ({ ticketId, comments, onCommentAdded }: TicketCommentsPr
                   <Badge variant="outline" className="text-xs">
                     {comment.user.role}
                   </Badge>
+                  {comment.ai_generated && (
+                    <Badge variant="secondary" className="text-xs">
+                      🤖 AI Generated
+                    </Badge>
+                  )}
                 </div>
                 <span className="text-sm text-gray-500">
                   {new Date(comment.created_at).toLocaleString()}
                 </span>
               </div>
-              <p className="text-gray-700">{comment.content}</p>
+              <div
+                className="text-gray-700"
+                dangerouslySetInnerHTML={{ __html: comment.content }}
+              />
+              {comment.ai_generated && comment.ai_metadata?.confidence && (
+                <div className="text-sm text-gray-500">
+                  AI Confidence: {Math.round(comment.ai_metadata.confidence * 100)}%
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -87,9 +175,28 @@ const TicketComments = ({ ticketId, comments, onCommentAdded }: TicketCommentsPr
           placeholder="Add a comment..."
           className="min-h-[100px]"
         />
-        <Button onClick={handleSubmit} disabled={isSubmitting || !content.trim()}>
-          {isSubmitting ? 'Adding...' : 'Add Comment'}
-        </Button>
+        <div className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={handleAIResponse}
+            disabled={isGeneratingAI || isSubmitting}
+          >
+            {isGeneratingAI ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              '🤖 Get AI Suggestion'
+            )}
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || !content.trim() || isGeneratingAI}
+          >
+            {isSubmitting ? 'Adding...' : 'Add Comment'}
+          </Button>
+        </div>
       </div>
     </div>
   );

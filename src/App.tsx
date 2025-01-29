@@ -13,6 +13,7 @@ import Settings from './pages/Settings';
 import Companies from './pages/Companies';
 import React, { useEffect, useState } from 'react';
 import { supabase } from './integrations/supabase/client';
+import AITest from './components/AITest';
 
 const queryClient = new QueryClient();
 
@@ -108,6 +109,10 @@ const App = () => {
               <Route
                 path="/auth"
                 element={!session ? <Auth /> : <Navigate to="/dashboard" replace />}
+              />
+              <Route
+                path="/ai-test"
+                element={<AITest />}
               />
             </Routes>
           </BrowserRouter>

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Clock, MessageSquare, User, Building, Star } from 'lucide-react';
+import { Clock, MessageSquare, User, Building, Star, Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Ticket, TicketComment, UserRole, TicketStatus, TicketPriority } from '@/types/ticket';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,6 +19,7 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { Textarea } from '@/components/ui/textarea';
 import FileUpload from './FileUpload';
 import AttachmentList from './AttachmentList';
+import { generateResponse, analyzeTicketPriority, summarizeThread } from '@/lib/ai-service';
 
 interface TicketDetailsProps {
   ticket: Ticket;
@@ -54,6 +56,11 @@ const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetai
   const [commentAttachments, setCommentAttachments] = useState<{ [key: string]: Attachment[] }>({});
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [isAnalyzingPriority, setIsAnalyzingPriority] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiPriority, setAiPriority] = useState<any | null>(null);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -600,6 +607,76 @@ const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetai
     }
   };
 
+  const handleGenerateAISummary = async () => {
+    setIsGeneratingSummary(true);
+    try {
+      const summary = await summarizeThread(
+        `${ticket.title}\n${ticket.description}`,
+        comments.map(c => c.content)
+      );
+      setAiSummary(summary);
+      toast({
+        title: 'Success',
+        description: 'Thread summary generated successfully.',
+      });
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate summary. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const handleAnalyzePriority = async () => {
+    setIsAnalyzingPriority(true);
+    try {
+      const priority = await analyzeTicketPriority(ticket.title, ticket.description);
+      setAiPriority(priority);
+      toast({
+        title: 'Success',
+        description: 'Priority analysis completed successfully.',
+      });
+    } catch (error) {
+      console.error('Error analyzing priority:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to analyze priority. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAnalyzingPriority(false);
+    }
+  };
+
+  const handleAIResponse = async () => {
+    setIsGeneratingAI(true);
+    try {
+      // Pass full context to generate a relevant response
+      const response = await generateResponse(
+        `${ticket.title}\n${ticket.description}`,
+        comments.map(c => c.content)
+      );
+      setNewComment(response.content);
+      toast({
+        title: 'Success',
+        description: 'AI response generated successfully.',
+      });
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate AI response. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm">
       <div className="p-6 space-y-6">
@@ -782,6 +859,24 @@ const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetai
               ))}
             </ScrollArea>
             <div className="space-y-2">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-medium text-zendesk-secondary">Add Comment</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAIResponse}
+                  disabled={isGeneratingAI}
+                >
+                  {isGeneratingAI ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating AI Response...
+                    </>
+                  ) : (
+                    '🤖 Get AI Suggestion'
+                  )}
+                </Button>
+              </div>
               <RichTextEditor
                 value={newComment}
                 onChange={setNewComment}
@@ -803,6 +898,105 @@ const TicketDetails = ({ ticket: initialTicket, onClose, onUpdate }: TicketDetai
             </div>
           </div>
         </div>
+
+        {/* AI Features Section */}
+        <Card className="bg-gray-50">
+          <div className="p-6 space-y-6">
+            <h3 className="text-lg font-semibold">🤖 AI Insights</h3>
+            
+            {/* AI Summary */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h4 className="font-medium">Thread Summary</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateAISummary}
+                  disabled={isGeneratingSummary}
+                >
+                  {isGeneratingSummary ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {aiSummary ? 'Refresh Summary' : 'Generate Summary'}
+                    </>
+                  )}
+                </Button>
+              </div>
+              {aiSummary && (
+                <div className="bg-white rounded-md p-4">
+                  <p className="text-sm">{aiSummary}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Priority Analysis */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h4 className="font-medium">Priority Analysis</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyzePriority}
+                  disabled={isAnalyzingPriority}
+                >
+                  {isAnalyzingPriority ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {aiPriority ? 'Refresh Analysis' : 'Analyze Priority'}
+                    </>
+                  )}
+                </Button>
+              </div>
+              {aiPriority && (
+                <div className="bg-white rounded-md p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Suggested Priority:</span>
+                      <Badge variant="outline" className="capitalize">
+                        {aiPriority.priority}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Confidence:</span>
+                      <span className="text-sm">{Math.round(aiPriority.confidence * 100)}%</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Reasoning:</span>
+                      <p className="text-sm mt-1">{aiPriority.reasoning}</p>
+                    </div>
+                    {aiPriority?.factors && (
+                      <div className="space-y-1">
+                        <span className="text-sm font-medium">Factor Scores:</span>
+                        {Object.entries(aiPriority.factors).map(([factor, score]: [string, number]) => (
+                          <div key={factor} className="flex items-center">
+                            <span className="text-sm capitalize">{factor}:</span>
+                            <div className="ml-2 flex-1 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full" 
+                                style={{ width: `${score * 10}%` }}
+                              />
+                            </div>
+                            <span className="ml-2 text-sm">{score}/10</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
