@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
@@ -26,6 +26,29 @@ const AITest = () => {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Record<string, TestResult>>({});
   const [currentTest, setCurrentTest] = useState<string>("");
+
+  // Add global styles for summary sections
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .summary-section .section {
+        margin-bottom: 1rem;
+      }
+      .summary-section h4 {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #374151;
+      }
+      .summary-section p {
+        margin-left: 1rem;
+        line-height: 1.5;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   // Evaluate priority analysis accuracy with weighted factors
   const evaluatePriorityAnalysis = (result: any, expectedOutput: any) => {
@@ -469,16 +492,16 @@ const AITest = () => {
                           <h4 className="font-medium text-sm mb-2">Factors</h4>
                           {result.priority?.factors && (
                             <div className="space-y-2">
-                              {Object.entries(result.priority.factors).map(([factor, score]) => (
+                              {Object.entries(result.priority.factors).map(([factor, score]: [string, number]) => (
                                 <div key={factor} className="flex items-center">
                                   <span className="text-sm capitalize">{factor}:</span>
                                   <div className="ml-2 flex-1 bg-gray-200 rounded-full h-2">
                                     <div 
                                       className="bg-blue-600 h-2 rounded-full" 
-                                      style={{ width: `${(score as number) * 10}%` }}
+                                      style={{ width: `${score * 10}%` }}
                                     />
                                   </div>
-                                  <span className="ml-2 text-sm">{score}/10</span>
+                                  <span className="ml-2 text-sm">{(score as number)}/10</span>
                                 </div>
                               ))}
                             </div>
@@ -502,7 +525,7 @@ const AITest = () => {
                   <CardContent className="pt-6">
                     <h3 className="font-semibold mb-2">Thread Summary</h3>
                     <div className="bg-gray-50 p-4 rounded">
-                      <pre className="whitespace-pre-wrap text-sm">{result.summary}</pre>
+                      <p className="text-sm text-gray-700 leading-relaxed">{result.summary}</p>
                     </div>
                   </CardContent>
                 </Card>

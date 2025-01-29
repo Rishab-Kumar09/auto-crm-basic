@@ -862,7 +862,9 @@ Requirements:
    - Provide clear next steps or solutions
 4. Keep the tone professional but friendly
 5. Include specific details from the ticket/comments in your response
-6. End with a clear call to action or next step
+6. End with a clear call to action in bold HTML format (using <strong> tags)
+7. DO NOT include any signature line (name, position, company) as these will be automatically added by the system
+8. Use proper HTML formatting for any bold text (<strong> tags) instead of markdown/asterisks
 
 Generate a response that addresses the current state of the ticket:`;
 
@@ -1131,33 +1133,24 @@ export const summarizeThread = async (
     const runId = getRunId(run);
 
     const prompt = PromptTemplate.fromTemplate(`
-      As an expert analyst, create a comprehensive yet concise summary of this support ticket thread.
+      As an expert analyst, create a concise summary of THIS SPECIFIC support ticket thread.
       
-      Focus on these key elements:
-      1. Core Issue
-         - Initial problem description
-         - Technical details provided
+      Important:
+      1. Write a single, well-structured paragraph
+      2. Start with the core issue
+      3. Follow with current status
+      4. Include key technical details
+      5. End with next steps
+      6. NO formatting, NO headings, NO bullet points
+      7. Focus ONLY on information from this specific ticket
       
-      2. Current Status
-         - Latest developments
-         - Any resolution attempts
-         - Outstanding blockers
+      Here's the ticket to analyze:
       
-      3. Key Information
-         - Important technical details
-         - Relevant error messages
-         - System components involved
+      Title and Description:
+      {ticketContent}
       
-      4. Next Steps
-         - Required actions
-         - Pending responses
-         - Expected resolutions
-      
-      Format the summary in clear sections with bullet points where appropriate.
-      Keep technical accuracy while maintaining readability.
-      
-      Ticket: {ticketContent}
-      Thread: {comments}
+      Comments Thread:
+      {comments}
     `);
 
     const formattedPrompt = await prompt.format({
