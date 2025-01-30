@@ -6,16 +6,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Clock, User, Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Ticket, Comment, TicketStatus } from '@/types/ticket';
+import { Ticket, Comment, TicketStatus, UserRole, TicketPriority } from '@/types/ticket';
 import TicketComments from './TicketComments';
 import TicketStatusSelect from './TicketStatusSelect';
 import { analyzeTicketPriority, summarizeThread } from '@/lib/ai-service';
-
-interface TicketDetailsProps {
-  ticket: Ticket;
-  onClose: () => void;
-  onUpdate: () => void;
-}
 
 interface AISummary {
   content: string;
@@ -23,10 +17,37 @@ interface AISummary {
 }
 
 interface AIPriority {
-  priority: string;
+  priority: TicketPriority;
   confidence: number;
   reasoning: string;
+  factors: {
+    urgency: number;
+    impact: number;
+    scope: number;
+    businessValue: number;
+  };
+  details: string[];
   lastUpdated: string;
+}
+
+interface AIMetadata {
+  summary?: AISummary;
+  priority?: AIPriority;
+}
+
+interface TicketWithMetadata extends Omit<Ticket, 'ai_metadata'> {
+  ai_metadata?: AIMetadata;
+}
+
+interface TicketUpdate {
+  status?: TicketStatus;
+  ai_metadata?: AIMetadata;
+}
+
+interface TicketDetailsProps {
+  ticket: TicketWithMetadata;
+  onClose: () => void;
+  onUpdate: () => void;
 }
 
 const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
@@ -73,7 +94,7 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
             id: comment.user.id,
             name: comment.user.full_name || 'Unknown User',
             email: comment.user.email,
-            role: comment.user.role,
+            role: comment.user.role as UserRole,
           },
           created_at: comment.created_at,
         }))
@@ -117,7 +138,7 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
     }
   };
 
-  const updateAIMetadata = async (metadata: any) => {
+  const updateAIMetadata = async (metadata: Partial<AIMetadata>) => {
     const { error } = await supabase
       .from('tickets')
       .update({
@@ -125,7 +146,7 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
           ...ticket.ai_metadata,
           ...metadata
         }
-      })
+      } as TicketUpdate)
       .eq('id', ticket.id);
 
     if (error) throw error;
@@ -171,7 +192,11 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
 
       await updateAIMetadata({
         priority: {
-          ...analysis,
+          priority: analysis.priority as TicketPriority,
+          confidence: analysis.confidence,
+          reasoning: analysis.reasoning,
+          factors: analysis.factors,
+          details: analysis.details,
           lastUpdated: new Date().toISOString()
         }
       });

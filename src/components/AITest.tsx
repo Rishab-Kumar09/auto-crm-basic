@@ -135,9 +135,10 @@ const AITest = () => {
   // Evaluate response quality with detailed criteria
   const evaluateResponse = (response: string | undefined, expectedOutput: TestCase['expectedOutput'] | undefined): ResponseQualityMetrics => {
     const minThreshold = 0.1;
-    const content = response?.toLowerCase() || '';
     
     if (!response || !expectedOutput) return { overall: 0, professionalism: 0, accuracy: 0 };
+    
+    const content = response.toLowerCase();
     
     // Evaluate professionalism (50%)
     const professionalismScore = evaluateProfessionalism(content);
@@ -278,14 +279,13 @@ const AITest = () => {
       const endTime = Date.now();
 
       // Calculate metrics
-      const responseQuality = evaluateResponse(response, testCase.expectedOutput);
+      const responseQuality = evaluateResponse(response.content, testCase.expectedOutput);
       const priorityAccuracy = evaluatePriorityAnalysis(priority, testCase.expectedOutput);
 
       const metrics = {
         priorityAccuracy,
         responseQuality,
-        responseTime: endTime - startTime,
-        successRate: response && priority && summary ? 1 : 0
+        responseTime: endTime - startTime
       };
 
       setResults(prev => ({
