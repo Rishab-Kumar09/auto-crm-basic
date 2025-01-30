@@ -467,6 +467,37 @@ const AITest = () => {
                   </Card>
                 )}
 
+                {(() => {
+                  const testCase = evaluationTestCases.find(t => t.name === testName);
+                  return (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <h3 className="font-semibold mb-2">Original Ticket</h3>
+                        <div className="bg-gray-50 p-4 rounded space-y-2">
+                          <div>
+                            <span className="font-medium">Title: </span>
+                            <span className="text-sm">{testCase?.input.title}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium">Description: </span>
+                            <span className="text-sm">{testCase?.input.description}</span>
+                          </div>
+                          {testCase?.input.comments.length > 0 && (
+                            <div>
+                              <span className="font-medium">Comments:</span>
+                              <ul className="list-disc ml-5 mt-1 text-sm space-y-1">
+                                {testCase.input.comments.map((comment, i) => (
+                                  <li key={i}>{comment}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
                 <Card>
                   <CardContent className="pt-6">
                     <h3 className="font-semibold mb-2">AI Response Generation</h3>
