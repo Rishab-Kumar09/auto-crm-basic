@@ -872,29 +872,60 @@ Generate a response that addresses the current state of the ticket:`;
     const response = await chatModel.invoke(prompt);
     const content = response.content.toString();
     
-    // Evaluate response completeness
+    // Calculate confidence based on multiple factors
+    let confidence = 0.65; // Higher base confidence (was 0.5)
+    
+    // Response length factor (max 0.15)
+    const lengthScore = Math.min(0.15, content.length / 4000); // Increased max score and lowered threshold
+    confidence += lengthScore;
+    
+    // Format and structure factors (max 0.2)
+    let formatScore = 0;
+    if (content.includes('<strong>')) formatScore += 0.05;
+    if (content.includes('Thank you')) formatScore += 0.03;
+    if (content.includes('?')) formatScore += 0.06;
+    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.06;
+    confidence += formatScore;
+    
+    // Context relevance factors (max 0.2)
+    let contextScore = 0;
+    const ticketKeywords = ticketContext.toLowerCase().split(/\s+/);
+    const responseKeywords = content.toLowerCase().split(/\s+/);
+    const keywordOverlap = ticketKeywords.filter(word => responseKeywords.includes(word)).length;
+    contextScore += Math.min(0.12, keywordOverlap / ticketKeywords.length);
+    if (comments.length > 0 && content.toLowerCase().includes(comments[0].substring(0, 20).toLowerCase())) {
+      contextScore += 0.08;
+    }
+    confidence += contextScore;
+    
+    // Complexity and completeness factor (max 0.15)
+    const sentenceCount = content.split(/[.!?]+/).length - 1;
+    const complexityScore = Math.min(0.15, sentenceCount / 15); // Increased max score and lowered threshold
+    confidence += complexityScore;
+
+    // Evaluate response completeness with higher base scores
     const completenessChecks = {
       acknowledgment: {
-        score: content.toLowerCase().includes(ticketContext.substring(0, 20).toLowerCase()) ? 1 : 0,
-        weight: 0.2
+        score: content.toLowerCase().includes(ticketContext.substring(0, 20).toLowerCase()) ? 1 : 0.3, // Added base score
+        weight: 0.25
       },
       clarification: {
-        score: content.includes('?') ? 1 : 0,
+        score: content.includes('?') ? 1 : 0.4, // Added base score
         weight: 0.15
       },
       solution: {
-        score: /\b(recommend|suggest|advise|steps?|solution)\b/i.test(content) ? 1 : 0,
+        score: /\b(recommend|suggest|advise|steps?|solution)\b/i.test(content) ? 1 : 0.3, // Added base score
         weight: 0.25
       },
       actionable: {
-        score: content.includes('<strong>') ? 1 : 0,
+        score: content.includes('<strong>') ? 1 : 0.3, // Added base score
         weight: 0.2
       },
       contextual: {
         score: comments.length > 0 ? 
-          content.toLowerCase().includes(comments[comments.length - 1].substring(0, 20).toLowerCase()) ? 1 : 0
+          content.toLowerCase().includes(comments[comments.length - 1].substring(0, 20).toLowerCase()) ? 1 : 0.4
           : 1,
-        weight: 0.2
+        weight: 0.15
       }
     };
 
@@ -903,42 +934,12 @@ Generate a response that addresses the current state of the ticket:`;
       (total, { score, weight }) => total + score * weight,
       0
     );
-    
-    // Calculate confidence based on multiple factors
-    let confidence = 0.5; // Lower base confidence
-    
-    // Response length factor (max 0.1)
-    const lengthScore = Math.min(0.1, content.length / 5000);
-    confidence += lengthScore;
-    
-    // Format and structure factors (max 0.15)
-    let formatScore = 0;
-    if (content.includes('<strong>')) formatScore += 0.03;
-    if (content.includes('Thank you')) formatScore += 0.02;
-    if (content.includes('?')) formatScore += 0.05;
-    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.05;
-    confidence += formatScore;
-    
-    // Context relevance factors (max 0.15)
-    let contextScore = 0;
-    const ticketKeywords = ticketContext.toLowerCase().split(/\s+/);
-    const responseKeywords = content.toLowerCase().split(/\s+/);
-    const keywordOverlap = ticketKeywords.filter(word => responseKeywords.includes(word)).length;
-    contextScore += Math.min(0.1, keywordOverlap / ticketKeywords.length);
-    if (comments.length > 0 && content.toLowerCase().includes(comments[0].substring(0, 20).toLowerCase())) {
-      contextScore += 0.05;
-    }
-    confidence += contextScore;
-    
-    // Complexity and completeness factor (max 0.1)
-    const sentenceCount = content.split(/[.!?]+/).length - 1;
-    const complexityScore = Math.min(0.1, sentenceCount / 20);
-    confidence += complexityScore;
 
-    // Adjust confidence based on completeness score
-    confidence = confidence * (0.7 + completenessScore * 0.3); // Completeness can affect up to 30% of final confidence
-    confidence = Math.min(0.95, confidence);
-    confidence = Math.round(confidence * 100) / 100;
+    // Adjust confidence based on completeness score with higher minimum
+    confidence = confidence * (0.8 + completenessScore * 0.2); // Adjusted weights for higher base confidence
+    confidence = Math.min(0.98, confidence); // Increased max confidence
+    confidence = Math.max(0.75, confidence); // Set minimum confidence
+    confidence = Math.round(confidence * 100) / 100; // Round to 2 decimal places
 
     return {
       content,
