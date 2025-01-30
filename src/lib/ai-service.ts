@@ -873,72 +873,37 @@ Generate a response that addresses the current state of the ticket:`;
     const content = response.content.toString();
     
     // Calculate confidence based on multiple factors
-    let confidence = 0.65; // Higher base confidence (was 0.5)
+    let confidence = 0.5; // Lower base confidence
     
-    // Response length factor (max 0.15)
-    const lengthScore = Math.min(0.15, content.length / 4000); // Increased max score and lowered threshold
+    // Response length factor (max 0.1)
+    const lengthScore = Math.min(0.1, content.length / 5000); // Scales with length up to 5000 chars
     confidence += lengthScore;
     
-    // Format and structure factors (max 0.2)
+    // Format and structure factors (max 0.15)
     let formatScore = 0;
-    if (content.includes('<strong>')) formatScore += 0.05;
-    if (content.includes('Thank you')) formatScore += 0.03;
-    if (content.includes('?')) formatScore += 0.06;
-    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.06;
+    if (content.includes('<strong>')) formatScore += 0.03;
+    if (content.includes('Thank you')) formatScore += 0.02;
+    if (content.includes('?')) formatScore += 0.05; // Shows engagement with user
+    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.05; // Shows actionable content
     confidence += formatScore;
     
-    // Context relevance factors (max 0.2)
+    // Context relevance factors (max 0.15)
     let contextScore = 0;
     const ticketKeywords = ticketContext.toLowerCase().split(/\s+/);
     const responseKeywords = content.toLowerCase().split(/\s+/);
     const keywordOverlap = ticketKeywords.filter(word => responseKeywords.includes(word)).length;
-    contextScore += Math.min(0.12, keywordOverlap / ticketKeywords.length);
+    contextScore += Math.min(0.1, keywordOverlap / ticketKeywords.length);
     if (comments.length > 0 && content.toLowerCase().includes(comments[0].substring(0, 20).toLowerCase())) {
-      contextScore += 0.08;
+      contextScore += 0.05;
     }
     confidence += contextScore;
     
-    // Complexity and completeness factor (max 0.15)
+    // Complexity and completeness factor (max 0.1)
     const sentenceCount = content.split(/[.!?]+/).length - 1;
-    const complexityScore = Math.min(0.15, sentenceCount / 15); // Increased max score and lowered threshold
+    const complexityScore = Math.min(0.1, sentenceCount / 20); // Scales with number of sentences up to 20
     confidence += complexityScore;
 
-    // Evaluate response completeness with higher base scores
-    const completenessChecks = {
-      acknowledgment: {
-        score: content.toLowerCase().includes(ticketContext.substring(0, 20).toLowerCase()) ? 1 : 0.3, // Added base score
-        weight: 0.25
-      },
-      clarification: {
-        score: content.includes('?') ? 1 : 0.4, // Added base score
-        weight: 0.15
-      },
-      solution: {
-        score: /\b(recommend|suggest|advise|steps?|solution)\b/i.test(content) ? 1 : 0.3, // Added base score
-        weight: 0.25
-      },
-      actionable: {
-        score: content.includes('<strong>') ? 1 : 0.3, // Added base score
-        weight: 0.2
-      },
-      contextual: {
-        score: comments.length > 0 ? 
-          content.toLowerCase().includes(comments[comments.length - 1].substring(0, 20).toLowerCase()) ? 1 : 0.4
-          : 1,
-        weight: 0.15
-      }
-    };
-
-    // Calculate overall completeness score
-    const completenessScore = Object.values(completenessChecks).reduce(
-      (total, { score, weight }) => total + score * weight,
-      0
-    );
-
-    // Adjust confidence based on completeness score with higher minimum
-    confidence = confidence * (0.8 + completenessScore * 0.2); // Adjusted weights for higher base confidence
-    confidence = Math.min(0.98, confidence); // Increased max confidence
-    confidence = Math.max(0.75, confidence); // Set minimum confidence
+    confidence = Math.min(0.95, confidence); // Cap at 95%
     confidence = Math.round(confidence * 100) / 100; // Round to 2 decimal places
 
     return {
@@ -947,11 +912,7 @@ Generate a response that addresses the current state of the ticket:`;
         model: chatModel.modelName,
         created: Date.now(),
         responseTime: Date.now(),
-        confidence,
-        completeness: {
-          score: completenessScore,
-          details: completenessChecks
-        }
+        confidence
       }
     };
   } catch (error) {
