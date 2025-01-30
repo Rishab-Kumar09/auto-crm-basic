@@ -872,11 +872,22 @@ Generate a response that addresses the current state of the ticket:`;
     const response = await chatModel.invoke(prompt);
     const content = response.content.toString();
     
-    // Calculate confidence based on response characteristics
-    let confidence = 0.8; // Default confidence
-    if (content.length > 200) confidence += 0.1;
-    if (content.includes('<strong>')) confidence += 0.1;
-    confidence = Math.min(1.0, confidence); // Cap at 1.0
+    // Calculate confidence based on multiple factors
+    let confidence = 0.7; // Base confidence
+    
+    // Length factor (0.1)
+    if (content.length > 200) confidence += 0.05;
+    if (content.length > 400) confidence += 0.05;
+    
+    // Format factor (0.1)
+    if (content.includes('<strong>')) confidence += 0.05;
+    if (content.includes('Thank you')) confidence += 0.05;
+    
+    // Context factor (0.1)
+    if (content.includes(ticketContext.substring(0, 20))) confidence += 0.05;
+    if (comments.length > 0 && content.includes(comments[0].substring(0, 20))) confidence += 0.05;
+
+    confidence = Math.min(0.95, confidence); // Cap at 95%
 
     return {
       content,
