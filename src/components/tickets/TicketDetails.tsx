@@ -256,6 +256,74 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
         <Card className="bg-gray-50">
           <CardContent className="pt-6">
             <div className="space-y-4">
+              {/* Priority Analysis Section */}
+              <div className="flex justify-between items-start">
+                <div className="space-y-2 flex-1">
+                  <h3 className="font-medium">🎯 Priority Analysis</h3>
+                  {aiPriority ? (
+                    <>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant={aiPriority.priority === 'high' ? 'destructive' : aiPriority.priority === 'medium' ? 'default' : 'secondary'}>
+                          {aiPriority.priority.toUpperCase()}
+                        </Badge>
+                        <span className="text-sm text-gray-500">
+                          Confidence: {(aiPriority.confidence * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">{aiPriority.reasoning}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Factors</h4>
+                          {Object.entries(aiPriority.factors).map(([factor, score]) => (
+                            <div key={factor} className="flex items-center mb-2">
+                              <span className="text-sm capitalize w-32">{factor}:</span>
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-blue-600 h-2 rounded-full"
+                                  style={{ width: `${(score / 10) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-sm ml-2">{score}/10</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Details</h4>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            {aiPriority.details.map((detail, index) => (
+                              <li key={index}>{detail}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">
+                        Last updated: {new Date(aiPriority.lastUpdated).toLocaleString()}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-500">No priority analysis yet.</p>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyzePriority}
+                  disabled={isAnalyzingPriority}
+                >
+                  {isAnalyzingPriority ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Analyze Priority
+                    </>
+                  )}
+                </Button>
+              </div>
+
               {/* Summary Section */}
               <div className="flex justify-between items-start">
                 <div className="space-y-2 flex-1">
@@ -285,50 +353,7 @@ const TicketDetails = ({ ticket, onClose, onUpdate }: TicketDetailsProps) => {
                   ) : (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      {aiSummary ? 'Refresh Summary' : 'Generate Summary'}
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Priority Analysis Section */}
-              <div className="flex justify-between items-start">
-                <div className="space-y-2 flex-1">
-                  <h3 className="font-medium">🤖 AI Priority Analysis</h3>
-                  {aiPriority ? (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="capitalize">
-                          Suggested: {aiPriority.priority}
-                        </Badge>
-                        <span className="text-sm text-gray-500">
-                          Confidence: {Math.round(aiPriority.confidence * 100)}%
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">{aiPriority.reasoning}</p>
-                      <p className="text-xs text-gray-400">
-                        Last updated: {new Date(aiPriority.lastUpdated).toLocaleString()}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-500">No priority analysis yet.</p>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAnalyzePriority}
-                  disabled={isAnalyzingPriority}
-                >
-                  {isAnalyzingPriority ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      {aiPriority ? 'Refresh Analysis' : 'Analyze Priority'}
+                      Generate Summary
                     </>
                   )}
                 </Button>
