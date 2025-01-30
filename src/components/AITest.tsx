@@ -4,22 +4,61 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { generateResponse, analyzeTicketPriority, summarizeThread, evaluationTestCases } from '@/lib/ai-service';
 
-interface TestResult {
-  response: any;
-  priority: any;
-  summary: string;
-  error?: string;
-  metrics?: {
-    priorityAccuracy: number;
-    responseQuality: {
-      overall: number;
-      professionalism: number;
-      completeness: number;
-      accuracy: number;
-    };
-    responseTime: number;
-    successRate: number;
+interface TestCase {
+  name: string;
+  input: {
+    title: string;
+    description: string;
+    comments: string[];
   };
+  expectedOutput: {
+    priority: string;
+    factors: {
+      urgency: number;
+      impact: number;
+      scope: number;
+      businessValue: number;
+    };
+    responseKeyPoints: string[];
+  };
+}
+
+interface ResponseQualityMetrics {
+  overall: number;
+  professionalism: number;
+  accuracy: number;
+}
+
+interface TestResult {
+  response: {
+    content: string;
+    metadata: any;
+  };
+  priority: {
+    priority: string;
+    confidence: number;
+    reasoning: string;
+    factors: {
+      urgency: number;
+      impact: number;
+      scope: number;
+      businessValue: number;
+    };
+    details: string[];
+  };
+  summary: string;
+  metrics: {
+    responseQuality: ResponseQualityMetrics;
+    priorityAccuracy: number;
+    responseTime: number;
+  };
+  error?: any;
+}
+
+interface OverallMetrics {
+  totalTests: number;
+  passedTests: number;
+  avgResponseQuality: ResponseQualityMetrics;
 }
 
 const AITest = () => {
@@ -94,33 +133,27 @@ const AITest = () => {
   };
 
   // Evaluate response quality with detailed criteria
-  const evaluateResponseQuality = (response: any, expectedOutput: any) => {
-    if (!response || !expectedOutput) return { overall: 0, professionalism: 0, completeness: 0, accuracy: 0 };
+  const evaluateResponse = (response: string | undefined, expectedOutput: TestCase['expectedOutput'] | undefined): ResponseQualityMetrics => {
+    const minThreshold = 0.1;
+    const content = response?.toLowerCase() || '';
     
-    const content = response.content.toLowerCase();
+    if (!response || !expectedOutput) return { overall: 0, professionalism: 0, accuracy: 0 };
     
-    // Evaluate professionalism (30%)
+    // Evaluate professionalism (50%)
     const professionalismScore = evaluateProfessionalism(content);
     
-    // Evaluate completeness (40%)
-    const completenessScore = evaluateCompleteness(content, expectedOutput.responseKeyPoints);
+    // Evaluate accuracy (50%)
+    const accuracyScore = evaluateAccuracy(content, expectedOutput.responseKeyPoints);
     
-    // Evaluate accuracy (30%)
-    const accuracyScore = evaluateAccuracy(content, expectedOutput);
-
-    // Apply minimum threshold to avoid overly harsh scores
-    const minThreshold = 0.3;
-    const overall = Math.max(minThreshold, 
-      professionalismScore * 0.3 +
-      completenessScore * 0.4 +
-      accuracyScore * 0.3
-    );
-
+    // Calculate overall score
+    const overallScore = 
+      professionalismScore * 0.5 +
+      accuracyScore * 0.5;
+    
     return {
-      overall,
+      overall: Math.max(minThreshold, overallScore),
       professionalism: Math.max(minThreshold, professionalismScore),
-      completeness: Math.max(minThreshold, completenessScore),
-      accuracy: Math.max(minThreshold, accuracyScore)
+      accuracy: Math.max(minThreshold, accuracyScore),
     };
   };
 
@@ -160,34 +193,6 @@ const AITest = () => {
     if (content.length > 100) score += 0.1; // Reward detailed responses
     if (/^[A-Z]/.test(content)) score += 0.05; // Reward proper capitalization
     if (content.includes('would') || content.includes('could')) score += 0.05; // Reward polite phrasing
-
-    return Math.max(0, Math.min(1, score));
-  };
-
-  const evaluateCompleteness = (content: string, keyPoints: string[]) => {
-    let score = 0.3; // Start with base score
-    
-    keyPoints.forEach(point => {
-      const keywords = point.toLowerCase().split(' ');
-      const matchCount = keywords.filter(word => {
-        // Check for word or common variations
-        return content.includes(word) || 
-               content.includes(word + 's') || // plural
-               content.includes(word + 'ing') || // gerund
-               content.includes(word + 'ed'); // past tense
-      }).length;
-      
-      // More forgiving threshold and partial credit
-      const matchRatio = matchCount / keywords.length;
-      if (matchRatio >= 0.4) {
-        score += (0.7/keyPoints.length) * (matchRatio);
-      }
-    });
-
-    // Bonus for additional context
-    if (content.length > 200) score += 0.1;
-    if (content.includes('if') || content.includes('when')) score += 0.05; // Handling conditions
-    if (content.includes('first') || content.includes('then')) score += 0.05; // Sequential steps
 
     return Math.max(0, Math.min(1, score));
   };
@@ -273,7 +278,7 @@ const AITest = () => {
       const endTime = Date.now();
 
       // Calculate metrics
-      const responseQuality = evaluateResponseQuality(response, testCase.expectedOutput);
+      const responseQuality = evaluateResponse(response, testCase.expectedOutput);
       const priorityAccuracy = evaluatePriorityAnalysis(priority, testCase.expectedOutput);
 
       const metrics = {
@@ -323,7 +328,6 @@ const AITest = () => {
       avgResponseQuality: {
         overall: validResults.reduce((acc, r) => acc + r.metrics.responseQuality.overall, 0) / validResults.length,
         professionalism: validResults.reduce((acc, r) => acc + r.metrics.responseQuality.professionalism, 0) / validResults.length,
-        completeness: validResults.reduce((acc, r) => acc + r.metrics.responseQuality.completeness, 0) / validResults.length,
         accuracy: validResults.reduce((acc, r) => acc + r.metrics.responseQuality.accuracy, 0) / validResults.length
       },
       avgResponseTime: validResults.reduce((acc, r) => acc + r.metrics.responseTime, 0) / validResults.length,
@@ -394,7 +398,6 @@ const AITest = () => {
                 <p className="text-2xl">{(overallMetrics.avgResponseQuality.overall * 100).toFixed(1)}%</p>
                 <div className="text-sm text-gray-500 mt-1">
                   <p>Professionalism: {(overallMetrics.avgResponseQuality.professionalism * 100).toFixed(1)}%</p>
-                  <p>Completeness: {(overallMetrics.avgResponseQuality.completeness * 100).toFixed(1)}%</p>
                   <p>Accuracy: {(overallMetrics.avgResponseQuality.accuracy * 100).toFixed(1)}%</p>
                 </div>
               </div>
@@ -448,7 +451,6 @@ const AITest = () => {
                           <p className="text-lg">{(result.metrics.responseQuality.overall * 100).toFixed(1)}%</p>
                           <div className="text-xs text-gray-500">
                             <p>Prof: {(result.metrics.responseQuality.professionalism * 100).toFixed(1)}%</p>
-                            <p>Comp: {(result.metrics.responseQuality.completeness * 100).toFixed(1)}%</p>
                             <p>Acc: {(result.metrics.responseQuality.accuracy * 100).toFixed(1)}%</p>
                           </div>
                         </div>

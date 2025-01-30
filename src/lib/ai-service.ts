@@ -25,17 +25,12 @@ interface AIResponse {
 const evaluationCriteria = {
   responseQuality: {
     professionalism: {
-      weight: 0.3,
+      weight: 0.5,
       description: "Professional tone and language",
       requirements: ["No slang", "Courteous language", "Clear structure"]
     },
-    completeness: {
-      weight: 0.4,
-      description: "Addresses all aspects of the issue",
-      requirements: ["Addresses main concern", "Handles follow-up questions", "Provides next steps"]
-    },
     accuracy: {
-      weight: 0.3,
+      weight: 0.5,
       description: "Technical accuracy and relevance",
       requirements: ["Correct technical information", "Relevant to ticket context", "No contradictions"]
     }
@@ -47,8 +42,8 @@ const evaluationCriteria = {
       scope: 0.2,
       businessValue: 0.2
     },
-    allowedDeviation: 2, // Allowed deviation in factor scores
-    confidenceThreshold: 0.7 // Minimum required confidence
+    allowedDeviation: 2,
+    confidenceThreshold: 0.7
   }
 };
 
@@ -873,32 +868,32 @@ Generate a response that addresses the current state of the ticket:`;
     const content = response.content.toString();
     
     // Calculate confidence based on multiple factors
-    let confidence = 0.75; // Base confidence
+    let confidence = 0.5; // Lower base confidence
     
-    // Response length factor (max 0.15)
-    const lengthScore = Math.min(0.15, content.length / 4000);
+    // Response length factor (max 0.1)
+    const lengthScore = Math.min(0.1, content.length / 5000); // Scales with length up to 5000 chars
     confidence += lengthScore;
     
-    // Format and structure factors (max 0.2)
+    // Format and structure factors (max 0.15)
     let formatScore = 0;
-    if (content.includes('<strong>')) formatScore += 0.05;
-    if (content.includes('Thank you')) formatScore += 0.05;
-    if (content.includes('?')) formatScore += 0.05;
-    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.05;
+    if (content.includes('<strong>')) formatScore += 0.03;
+    if (content.includes('Thank you')) formatScore += 0.02;
+    if (content.includes('?')) formatScore += 0.05; // Shows engagement with user
+    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.05; // Shows actionable content
     confidence += formatScore;
     
-    // Context relevance factors (max 0.2)
+    // Context relevance factors (max 0.15)
     let contextScore = 0;
     const ticketKeywords = ticketContext.toLowerCase().split(/\s+/);
     const responseKeywords = content.toLowerCase().split(/\s+/);
     const keywordOverlap = ticketKeywords.filter(word => responseKeywords.includes(word)).length;
-    contextScore += Math.min(0.15, keywordOverlap / ticketKeywords.length);
+    contextScore += Math.min(0.1, keywordOverlap / ticketKeywords.length);
     if (comments.length > 0 && content.toLowerCase().includes(comments[0].substring(0, 20).toLowerCase())) {
       contextScore += 0.05;
     }
     confidence += contextScore;
 
-    confidence = Math.min(0.98, confidence); // Cap at 98%
+    confidence = Math.min(0.95, confidence); // Cap at 95%
     confidence = Math.round(confidence * 100) / 100; // Round to 2 decimal places
 
     return {
@@ -1227,7 +1222,6 @@ export const summarizeThread = async (
               response_time_ms: endTime - startTime,
               word_count: wordCount,
               compression_ratio: compressionRatio,
-              completeness_score: hasAllSections ? 1 : 0.5,
               sections_included: hasAllSections
             }
           },
