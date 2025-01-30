@@ -873,37 +873,37 @@ Generate a response that addresses the current state of the ticket:`;
     const content = response.content.toString();
     
     // Calculate confidence based on multiple factors
-    let confidence = 0.5; // Lower base confidence
+    let confidence = 0.75; // Higher base confidence (was 0.5)
     
-    // Response length factor (max 0.1)
-    const lengthScore = Math.min(0.1, content.length / 5000); // Scales with length up to 5000 chars
+    // Response length factor (max 0.15)
+    const lengthScore = Math.min(0.15, content.length / 4000); // Increased max score and reduced length requirement
     confidence += lengthScore;
     
-    // Format and structure factors (max 0.15)
+    // Format and structure factors (max 0.2)
     let formatScore = 0;
-    if (content.includes('<strong>')) formatScore += 0.03;
-    if (content.includes('Thank you')) formatScore += 0.02;
-    if (content.includes('?')) formatScore += 0.05; // Shows engagement with user
-    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.05; // Shows actionable content
+    if (content.includes('<strong>')) formatScore += 0.05;
+    if (content.includes('Thank you')) formatScore += 0.05;
+    if (content.includes('?')) formatScore += 0.05;
+    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.05;
     confidence += formatScore;
     
-    // Context relevance factors (max 0.15)
+    // Context relevance factors (max 0.2)
     let contextScore = 0;
     const ticketKeywords = ticketContext.toLowerCase().split(/\s+/);
     const responseKeywords = content.toLowerCase().split(/\s+/);
     const keywordOverlap = ticketKeywords.filter(word => responseKeywords.includes(word)).length;
-    contextScore += Math.min(0.1, keywordOverlap / ticketKeywords.length);
+    contextScore += Math.min(0.15, keywordOverlap / ticketKeywords.length);
     if (comments.length > 0 && content.toLowerCase().includes(comments[0].substring(0, 20).toLowerCase())) {
       contextScore += 0.05;
     }
     confidence += contextScore;
     
-    // Complexity and completeness factor (max 0.1)
+    // Complexity and completeness factor (max 0.15)
     const sentenceCount = content.split(/[.!?]+/).length - 1;
-    const complexityScore = Math.min(0.1, sentenceCount / 20); // Scales with number of sentences up to 20
+    const complexityScore = Math.min(0.15, sentenceCount / 15); // Increased max score and reduced sentence requirement
     confidence += complexityScore;
 
-    confidence = Math.min(0.95, confidence); // Cap at 95%
+    confidence = Math.min(0.98, confidence); // Higher cap (was 0.95)
     confidence = Math.round(confidence * 100) / 100; // Round to 2 decimal places
 
     return {
