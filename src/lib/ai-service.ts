@@ -873,10 +873,10 @@ Generate a response that addresses the current state of the ticket:`;
     const content = response.content.toString();
     
     // Calculate confidence based on multiple factors
-    let confidence = 0.75; // Higher base confidence (was 0.5)
+    let confidence = 0.75; // Base confidence
     
     // Response length factor (max 0.15)
-    const lengthScore = Math.min(0.15, content.length / 4000); // Increased max score and reduced length requirement
+    const lengthScore = Math.min(0.15, content.length / 4000);
     confidence += lengthScore;
     
     // Format and structure factors (max 0.2)
@@ -897,13 +897,8 @@ Generate a response that addresses the current state of the ticket:`;
       contextScore += 0.05;
     }
     confidence += contextScore;
-    
-    // Complexity and completeness factor (max 0.15)
-    const sentenceCount = content.split(/[.!?]+/).length - 1;
-    const complexityScore = Math.min(0.15, sentenceCount / 15); // Increased max score and reduced sentence requirement
-    confidence += complexityScore;
 
-    confidence = Math.min(0.98, confidence); // Higher cap (was 0.95)
+    confidence = Math.min(0.98, confidence); // Cap at 98%
     confidence = Math.round(confidence * 100) / 100; // Round to 2 decimal places
 
     return {
