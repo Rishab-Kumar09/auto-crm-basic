@@ -870,13 +870,21 @@ Generate a response that addresses the current state of the ticket:`;
 
   try {
     const response = await chatModel.invoke(prompt);
+    const content = response.content.toString();
+    
+    // Calculate confidence based on response characteristics
+    let confidence = 0.8; // Default confidence
+    if (content.length > 200) confidence += 0.1;
+    if (content.includes('<strong>')) confidence += 0.1;
+    confidence = Math.min(1.0, confidence); // Cap at 1.0
+
     return {
-      content: response.content,
+      content,
       metadata: {
         model: chatModel.modelName,
         created: Date.now(),
         responseTime: Date.now(),
-        confidence: 0.95
+        confidence
       }
     };
   } catch (error) {

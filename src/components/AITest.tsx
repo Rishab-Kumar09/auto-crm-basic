@@ -507,7 +507,7 @@ const AITest = () => {
                         <div className="mt-2 text-xs text-gray-500">
                           <p>Response Time: {result.response.metadata.responseTime}ms</p>
                           <p>Model: {result.response.metadata.model}</p>
-                          <p>Confidence: {(result.response.confidence * 100).toFixed(1)}%</p>
+                          <p>Confidence: {result.response.metadata?.confidence ? (result.response.metadata.confidence * 100).toFixed(1) : '0.0'}%</p>
                         </div>
                       )}
                     </div>
