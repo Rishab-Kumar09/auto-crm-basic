@@ -872,19 +872,51 @@ Generate a response that addresses the current state of the ticket:`;
     const response = await chatModel.invoke(prompt);
     const content = response.content.toString();
     
+    // Evaluate response completeness
+    const completenessChecks = {
+      acknowledgment: {
+        score: content.toLowerCase().includes(ticketContext.substring(0, 20).toLowerCase()) ? 1 : 0,
+        weight: 0.2
+      },
+      clarification: {
+        score: content.includes('?') ? 1 : 0,
+        weight: 0.15
+      },
+      solution: {
+        score: /\b(recommend|suggest|advise|steps?|solution)\b/i.test(content) ? 1 : 0,
+        weight: 0.25
+      },
+      actionable: {
+        score: content.includes('<strong>') ? 1 : 0,
+        weight: 0.2
+      },
+      contextual: {
+        score: comments.length > 0 ? 
+          content.toLowerCase().includes(comments[comments.length - 1].substring(0, 20).toLowerCase()) ? 1 : 0
+          : 1,
+        weight: 0.2
+      }
+    };
+
+    // Calculate overall completeness score
+    const completenessScore = Object.values(completenessChecks).reduce(
+      (total, { score, weight }) => total + score * weight,
+      0
+    );
+    
     // Calculate confidence based on multiple factors
     let confidence = 0.5; // Lower base confidence
     
     // Response length factor (max 0.1)
-    const lengthScore = Math.min(0.1, content.length / 5000); // Scales with length up to 5000 chars
+    const lengthScore = Math.min(0.1, content.length / 5000);
     confidence += lengthScore;
     
     // Format and structure factors (max 0.15)
     let formatScore = 0;
     if (content.includes('<strong>')) formatScore += 0.03;
     if (content.includes('Thank you')) formatScore += 0.02;
-    if (content.includes('?')) formatScore += 0.05; // Shows engagement with user
-    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.05; // Shows actionable content
+    if (content.includes('?')) formatScore += 0.05;
+    if (/\b(next steps|solution|recommend)\b/i.test(content)) formatScore += 0.05;
     confidence += formatScore;
     
     // Context relevance factors (max 0.15)
@@ -900,11 +932,13 @@ Generate a response that addresses the current state of the ticket:`;
     
     // Complexity and completeness factor (max 0.1)
     const sentenceCount = content.split(/[.!?]+/).length - 1;
-    const complexityScore = Math.min(0.1, sentenceCount / 20); // Scales with number of sentences up to 20
+    const complexityScore = Math.min(0.1, sentenceCount / 20);
     confidence += complexityScore;
 
-    confidence = Math.min(0.95, confidence); // Cap at 95%
-    confidence = Math.round(confidence * 100) / 100; // Round to 2 decimal places
+    // Adjust confidence based on completeness score
+    confidence = confidence * (0.7 + completenessScore * 0.3); // Completeness can affect up to 30% of final confidence
+    confidence = Math.min(0.95, confidence);
+    confidence = Math.round(confidence * 100) / 100;
 
     return {
       content,
@@ -912,7 +946,11 @@ Generate a response that addresses the current state of the ticket:`;
         model: chatModel.modelName,
         created: Date.now(),
         responseTime: Date.now(),
-        confidence
+        confidence,
+        completeness: {
+          score: completenessScore,
+          details: completenessChecks
+        }
       }
     };
   } catch (error) {
