@@ -983,7 +983,9 @@ Ensure your response is a valid JSON object following this exact structure.`);
     const cleanedJson = cleanedResponse.slice(startBrace, endBrace + 1);
     
     try {
+      console.log('Raw AI response:', response);
       const parsed = JSON.parse(cleanedJson);
+      console.log('Parsed confidence value:', parsed.confidence);
 
       // Validate the response format
       const validPriorities = ['high', 'medium', 'low'];

@@ -439,7 +439,7 @@ const AITest = () => {
                             <div className="text-xs text-gray-500">
                               <p>Expected: {evaluationTestCases.find(t => t.name === testName)?.expectedOutput.priority}</p>
                               <p>Actual: {result.priority.priority}</p>
-                              <p>Confidence: {(result.priority.confidence * 100).toFixed(1)}%</p>
+                              <p>Confidence: {result.priority?.confidence ? (result.priority.confidence * 100).toFixed(1) : '0.0'}%</p>
                             </div>
                           )}
                         </div>
